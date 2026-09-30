@@ -1,0 +1,77 @@
+/* ==============================================================================
+   OpenAPI / Swagger Viewer - Default Theme (Teal Accent)
+   ============================================================================== */
+
+:root {
+  --theme-brand-accent: #1ebea5;
+  --theme-brand-hover: #179b87;
+  --theme-brand-dark: #13796a;
+  --theme-brand-light: #eafaf7;
+  --theme-bg-body: #ffffff;
+  --theme-text-main: #333333;
+  --theme-text-heading: #222222;
+  --theme-text-muted: #4b5563;
+  --theme-border: #f1f1f1;
+  --theme-border-alt: #e5e7eb;
+}
+
+/* Light Theme Overrides */
+html:not(.dark) body {
+  background-color: var(--theme-bg-body) !important;
+  color: var(--theme-text-main) !important;
+}
+
+html:not(.dark) header {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  border-color: var(--theme-border) !important;
+}
+
+html:not(.dark) aside#sidebar-container {
+  background-color: var(--theme-bg-body) !important;
+  border-color: var(--theme-border) !important;
+}
+
+html:not(.dark) a {
+  color: var(--theme-brand-accent);
+}
+
+html:not(.dark) a:hover {
+  color: var(--theme-brand-hover);
+}
+
+html:not(.dark) hr {
+  border-color: var(--theme-border);
+}
+
+html:not(.dark) .bg-slate-50 {
+  background-color: #fafbfc;
+}
+
+html:not(.dark) .bg-slate-100 {
+  background-color: var(--theme-border);
+}
+
+html:not(.dark) .border-slate-100 {
+  border-color: var(--theme-border);
+}
+
+html:not(.dark) .border-slate-200 {
+  border-color: var(--theme-border-alt);
+}
+
+html:not(.dark) code:not([class*="hljs"]) {
+  color: var(--theme-brand-accent);
+  background-color: var(--theme-border);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+}
+
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800 {
+  color: var(--theme-text-heading);
+}
+
+html:not(.dark) .text-slate-700,
+html:not(.dark) .text-slate-600 {
+  color: var(--theme-text-muted);
+}

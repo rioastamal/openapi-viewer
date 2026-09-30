@@ -1,0 +1,3268 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAPI & Swagger Documentation Client</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          },
+          colors: {
+            accent: {
+              DEFAULT: '#1ebea5',
+              hover: '#179b87',
+              dark: '#13796a',
+              light: '#eafaf7',
+              border: '#a7ece0',
+              gray: '#f1f1f1',
+              text: '#333333'
+            },
+            brand: {
+              50: '#eafaf7',
+              100: '#d0f5ee',
+              200: '#a7ece0',
+              300: '#72dfcf',
+              400: '#3dccb8',
+              500: '#1ebea5',
+              600: '#1ebea5',
+              700: '#179b87',
+              800: '#13796a',
+              900: '#115e53',
+              950: '#073630'
+            },
+            blue: {
+              50: '#eafaf7',
+              100: '#d0f5ee',
+              200: '#a7ece0',
+              300: '#72dfcf',
+              400: '#3dccb8',
+              500: '#1ebea5',
+              600: '#1ebea5',
+              700: '#179b87',
+              800: '#13796a',
+              900: '#115e53',
+              950: '#073630'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js CDN (Atom One Dark theme & syntax highlighters) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Custom sleek scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.7);
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.5);
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.8);
+    }
+
+    /* Code Block & Syntax Highlighting Tokens (Atom One Dark theme) */
+    pre code, pre code.hljs {
+      font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace !important;
+      font-size: 0.825rem;
+      line-height: 1.6;
+      background: transparent !important;
+      tab-size: 2;
+    }
+    .hljs-comment, .token-comment { color: #7f848e !important; font-style: italic; }
+    .hljs-keyword, .token-keyword { color: #c678dd !important; font-weight: 600; }
+    .hljs-string, .token-string { color: #98c379 !important; }
+    .hljs-number, .token-number { color: #d19a66 !important; }
+    .hljs-literal, .hljs-boolean, .token-boolean, .token-null { color: #56b6c2 !important; font-weight: 600; }
+    .hljs-function, .hljs-title, .hljs-title.function_, .token-function { color: #61afef !important; font-weight: 600; }
+    .hljs-built_in, .token-builtin { color: #e5c07b !important; }
+    .hljs-attr, .token-key { color: #e06c75 !important; }
+    .hljs-params { color: #e5c07b !important; }
+    .hljs-variable { color: #e06c75 !important; }
+    .hljs-punctuation, .hljs-operator, .token-operator { color: #abb2bf !important; }
+    .hljs-property { color: #e5c07b !important; }
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+  </style>
+
+  <!-- Theme Stylesheet (Injected by build.sh) -->
+  <!-- __THEME_START__ -->
+  <link rel="stylesheet" href="themes/default.css">
+  <!-- __THEME_END__ -->
+</head>
+<body class="h-full w-full max-w-full overflow-x-hidden bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+  <!-- ========================================== -->
+  <!-- TOAST NOTIFICATIONS BANNER                 -->
+  <!-- ========================================== -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ========================================== -->
+  <!-- ERROR / STATUS BANNER                      -->
+  <!-- ========================================== -->
+  <div id="global-alert" class="hidden px-4 py-2.5 text-xs font-medium bg-rose-50 dark:bg-rose-950/60 border-b border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 flex items-center justify-between">
+    <div class="flex items-center gap-2 max-w-5xl mx-auto w-full">
+      <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400"></i>
+      <span id="global-alert-text" class="flex-1"></span>
+      <button id="btn-dismiss-alert" class="text-rose-600 hover:text-rose-900 dark:hover:text-rose-200 font-semibold p-1">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- TOP HEADER                                 -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors w-full max-w-full overflow-hidden">
+    <div class="max-w-[1920px] mx-auto px-2.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
+      
+      <!-- Brand & Spec Metadata -->
+      <div class="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+        <!-- Mobile Drawer Hamburger Button -->
+        <button id="btn-toggle-mobile-menu" class="lg:hidden p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none flex-shrink-0" aria-label="Toggle navigation">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-emerald-400 text-white flex items-center justify-center shadow-sm flex-shrink-0">
+            <i data-lucide="zap" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          </div>
+          <div class="min-w-0 flex items-baseline gap-1.5 sm:gap-2">
+            <h1 id="header-api-title" class="font-bold text-slate-900 dark:text-white text-sm sm:text-base lg:text-lg truncate tracking-tight">API Spec Viewer</h1>
+            <span id="header-api-version" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">v1.0.0</span>
+            <span id="header-spec-type" class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">OAS 3.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spec Controls Toolbar -->
+      <div class="flex items-center gap-1 sm:gap-2.5 flex-shrink-0">
+        
+        <!-- __COMPONENT_LOAD_URL_START__ -->
+        <!-- Remote URL Input & Fetch Form -->
+        <form id="form-fetch-remote" class="hidden md:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+          <i data-lucide="globe" class="w-4 h-4 ml-1.5 text-slate-400"></i>
+          <input 
+            type="url" 
+            id="input-spec-url" 
+            placeholder="Remote OpenAPI JSON URL..." 
+            class="bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none w-48 lg:w-64 px-1.5"
+            required
+          >
+          <button 
+            type="submit" 
+            id="btn-fetch-spec" 
+            class="px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm flex items-center gap-1"
+          >
+            <span>Fetch</span>
+          </button>
+        </form>
+        <!-- __COMPONENT_LOAD_URL_END__ -->
+
+
+        <!-- __COMPONENT_UPLOAD_START__ -->
+        <!-- File Upload Button -->
+        <label for="spec-file-input" class="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer flex-shrink-0" title="Load local OpenAPI or Swagger JSON file">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Upload JSON</span>
+        </label>
+        <input type="file" id="spec-file-input" accept=".json" class="hidden">
+        <!-- __COMPONENT_UPLOAD_END__ -->
+
+        <!-- Reset Demo Button -->
+        <button id="btn-reset-demo" class="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0" title="Reset Demo Spec">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Dark Mode Toggle -->
+        <button id="btn-theme-toggle" class="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0" title="Toggle Theme">
+          <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- MOBILE RESPONSIVE SEGMENTED TABS           -->
+  <!-- ========================================== -->
+  <div class="lg:hidden sticky top-14 sm:top-16 z-30 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-4 py-2 w-full max-w-full">
+    <div class="flex rounded-lg bg-slate-200 dark:bg-slate-800 p-0.5 max-w-sm mx-auto w-full min-w-0">
+      <button id="mobile-tab-docs" class="flex-1 py-1.5 text-xs font-medium rounded-md transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
+        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+        <span>Documentation</span>
+      </button>
+      <button id="mobile-tab-code" class="flex-1 py-1.5 text-xs font-medium rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5">
+        <i data-lucide="code" class="w-3.5 h-3.5"></i>
+        <span>Code &amp; Client</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MAIN 3-COLUMN CONTENT WRAPPER              -->
+  <!-- ========================================== -->
+  <div class="flex-1 w-full max-w-full mx-auto flex overflow-hidden min-h-0 relative">
+
+    <!-- Mobile Drawer Backdrop -->
+    <div id="mobile-drawer-backdrop" class="fixed inset-0 bg-slate-900/60 z-40 backdrop-blur-sm hidden transition-opacity lg:hidden"></div>
+
+    <!-- ======================================== -->
+    <!-- LEFT COLUMN: API NAVIGATION (20-25%)     -->
+    <!-- ======================================== -->
+    <aside id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-10 lg:w-72 xl:w-80 flex flex-col flex-shrink-0 h-full min-h-0">
+      
+      <!-- Mobile Drawer Close Header -->
+      <div class="lg:hidden flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+        <span class="font-bold text-sm text-slate-800 dark:text-slate-100">API Endpoints</span>
+        <button id="btn-close-mobile-menu" class="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Navigation Search Bar -->
+      <div class="p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900 flex-shrink-0">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400 pointer-events-none"></i>
+          <input 
+            type="text" 
+            id="input-filter" 
+            placeholder="Filter endpoints, tags..." 
+            class="w-full pl-9 pr-8 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+          <button id="btn-clear-search" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Tag Filter Selector -->
+        <div class="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1" id="tag-filter-pills">
+          <!-- Dynamically populated tag filter pills -->
+        </div>
+      </div>
+
+      <!-- Navigation Endpoints List -->
+      <nav id="nav-endpoints-tree" class="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+        <!-- Rendered dynamically by renderSidebar() -->
+      </nav>
+
+      <!-- Sidebar Footer Info -->
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 flex-shrink-0">
+        <span id="sidebar-endpoint-counter">13 endpoints</span>
+        <span class="flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Online</span>
+        </span>
+      </div>
+
+    </aside>
+
+    <!-- ======================================== -->
+    <!-- MIDDLE COLUMN: DOCUMENTATION (45-50%)    -->
+    <!-- ======================================== -->
+    <main id="docs-container" class="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 h-full min-h-0">
+      <!-- Dynamically populated by renderDetails() -->
+      <div id="endpoint-details-view" class="max-w-3xl mx-auto space-y-6 sm:space-y-8 w-full min-w-0">
+        <!-- Content rendered here -->
+      </div>
+    </main>
+
+    <!-- ======================================== -->
+    <!-- RIGHT COLUMN: MULTI-LANG CLIENT (30%+)   -->
+    <!-- ======================================== -->
+    <aside id="code-container" class="hidden lg:flex w-full max-w-full lg:w-[480px] xl:w-[560px] 2xl:w-[640px] flex-shrink-0 min-w-0 border-l border-slate-200 dark:border-slate-800 bg-slate-950 text-slate-100 flex-col h-full min-h-0 overflow-y-auto overflow-x-hidden">
+      
+      <!-- Sticky Sleek Header & Multi-Language Switcher -->
+      <div class="sticky top-0 z-20 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-2 flex-shrink-0">
+        
+        <!-- Language Selectors & Try Button -->
+        <div class="flex items-center gap-1.5 min-w-0">
+          <!-- Mobile Dropdown Selector (Active on < sm) -->
+          <select 
+            id="select-code-lang-mobile" 
+            class="sm:hidden text-xs bg-slate-800 text-slate-100 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+            aria-label="Select Code Language"
+          >
+            <option value="curl" selected>cURL</option>
+            <option value="javascript">JavaScript</option>
+            <option value="php">PHP</option>
+            <option value="golang">Golang</option>
+          </select>
+
+          <!-- Desktop Language Pills (Active on >= sm) -->
+          <div class="hidden sm:flex rounded-lg bg-slate-800/90 p-0.5 text-xs font-medium" id="desktop-lang-pills">
+            <button data-lang="curl" class="lang-tab-btn px-2.5 py-1 rounded-md bg-blue-600 text-white shadow-sm transition font-medium">cURL</button>
+            <button data-lang="javascript" class="lang-tab-btn px-2.5 py-1 rounded-md text-slate-300 hover:text-white transition font-medium">JS</button>
+            <button data-lang="php" class="lang-tab-btn px-2.5 py-1 rounded-md text-slate-300 hover:text-white transition font-medium">PHP</button>
+            <button data-lang="golang" class="lang-tab-btn px-2.5 py-1 rounded-md text-slate-300 hover:text-white transition font-medium">Golang</button>
+          </div>
+
+          <div class="h-4 w-px bg-slate-800 mx-0.5 hidden sm:block"></div>
+
+          <!-- Interactive Test Toggle Button -->
+          <button 
+            id="btn-toggle-interactive-test" 
+            class="px-2 py-1 text-xs font-medium rounded-md text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent transition flex items-center gap-1"
+            title="Interactive Client Request Tester"
+          >
+            <i data-lucide="play" class="w-3 h-3 text-emerald-400"></i>
+            <span class="hidden md:inline">Try It</span>
+          </button>
+        </div>
+
+        <!-- Copy Code Button -->
+        <button 
+          id="btn-copy-code" 
+          class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition shadow-sm flex-shrink-0"
+          title="Copy code snippet"
+        >
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span id="copy-btn-text">Copy</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Dynamic Fetch Code Snippet (Full Width, Ample Bottom Padding) -->
+      <div id="panel-code-snippet" class="w-full flex-1 flex flex-col p-2 sm:p-4 pb-36 sm:pb-28">
+        <div id="code-snippet-example-bar"></div>
+        <div class="relative w-full">
+          <pre class="w-full rounded-xl bg-slate-900 border border-slate-800/80 overflow-x-auto p-4 mb-4"><code id="code-snippet-pre" class="language-javascript block w-full"></code></pre>
+        </div>
+      </div>
+
+      <!-- Tab 2: Interactive API Request Tester (Full Width, Ample Bottom Padding) -->
+      <div id="panel-interactive-try" class="hidden w-full flex-1 flex flex-col space-y-4 p-3 sm:p-4 pb-36 sm:pb-28">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Live Client</span>
+            <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">Browser Direct</span>
+          </div>
+          
+          <div id="interactive-inputs-container" class="space-y-2.5">
+            <!-- Dynamically populated parameter inputs -->
+          </div>
+
+          <button 
+            id="btn-execute-request" 
+            class="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition shadow-sm"
+          >
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>Send Request</span>
+          </button>
+        </div>
+
+        <!-- Live Response Output Container -->
+        <div id="interactive-response-container" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2 flex-1 flex flex-col">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-slate-300">Live Response</span>
+            <div class="flex items-center gap-2">
+              <span id="try-response-status" class="px-1.5 py-0.5 rounded font-mono text-[11px]"></span>
+              <span id="try-response-time" class="text-slate-400 font-mono text-[11px]"></span>
+            </div>
+          </div>
+          <div class="relative flex-1 overflow-hidden">
+            <pre class="h-64 rounded-lg overflow-y-auto"><code id="try-response-code" class="language-json"></code></pre>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- ===================================================================================== -->
+  <!-- VANILLA JAVASCRIPT APPLICATION CORE                                                   -->
+  <!-- ===================================================================================== -->
+  <script>
+    'use strict';
+
+    /**
+     * ============================================================================
+     * 1. EMBEDDED SPECIFICATION
+     * ============================================================================
+     */
+    // __EMBEDDED_SPEC_START__
+    const EMBEDDED_OPENAPI_SPEC = null;
+    // __EMBEDDED_SPEC_END__
+    /**
+     * ============================================================================
+     * 2. SPEC RESOLUTION & DEREFERENCING HELPERS
+     * ============================================================================
+     */
+    function resolveJsonPointer(root, ref) {
+      if (!ref || typeof ref !== 'string' || !ref.startsWith('#/')) {
+        return null;
+      }
+      const parts = ref.substring(2).split('/').map(p => p.replace(/~1/g, '/').replace(/~0/g, '~'));
+      let curr = root;
+      for (const part of parts) {
+        if (curr && typeof curr === 'object' && part in curr) {
+          curr = curr[part];
+        } else {
+          return null;
+        }
+      }
+      return curr;
+    }
+
+    function dereferenceSchema(root, schema, depth = 0, visited = new Set()) {
+      if (!schema || typeof schema !== 'object' || depth > 12) return schema;
+
+      if (schema.$ref) {
+        if (visited.has(schema.$ref)) {
+          return { type: 'object', description: `[Circular: ${schema.$ref}]` };
+        }
+        const nextVisited = new Set(visited);
+        nextVisited.add(schema.$ref);
+        const resolved = resolveJsonPointer(root, schema.$ref);
+        if (resolved) {
+          const { $ref, ...rest } = schema;
+          const merged = { ...resolved, ...rest };
+          return dereferenceSchema(root, merged, depth + 1, nextVisited);
+        }
+        return schema;
+      }
+
+      if (schema.allOf && Array.isArray(schema.allOf)) {
+        const merged = {};
+        for (const sub of schema.allOf) {
+          const derefSub = dereferenceSchema(root, sub, depth + 1, visited);
+          if (derefSub && typeof derefSub === 'object') {
+            Object.assign(merged, derefSub);
+            if (derefSub.properties) {
+              merged.properties = Object.assign({}, merged.properties || {}, derefSub.properties);
+            }
+            if (derefSub.required) {
+              merged.required = Array.from(new Set([...(merged.required || []), ...derefSub.required]));
+            }
+          }
+        }
+        return merged;
+      }
+
+      if (schema.oneOf && Array.isArray(schema.oneOf) && schema.oneOf.length > 0) {
+        return dereferenceSchema(root, schema.oneOf[0], depth + 1, visited);
+      }
+      if (schema.anyOf && Array.isArray(schema.anyOf) && schema.anyOf.length > 0) {
+        return dereferenceSchema(root, schema.anyOf[0], depth + 1, visited);
+      }
+
+      const result = Array.isArray(schema) ? [] : {};
+      for (const [key, val] of Object.entries(schema)) {
+        if (val && typeof val === 'object') {
+          result[key] = dereferenceSchema(root, val, depth + 1, visited);
+        } else {
+          result[key] = val;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Generates a realistic mock JavaScript object from a JSON schema
+     */
+    function generateMockFromSchema(schema, propName = '', depth = 0) {
+      if (!schema || depth > 8) return null;
+
+      if (schema.example !== undefined) return schema.example;
+      if (schema.default !== undefined) return schema.default;
+      if (schema.examples && Array.isArray(schema.examples) && schema.examples.length > 0) return schema.examples[0];
+      if (schema.enum && schema.enum.length > 0) return schema.enum[0];
+
+      const type = schema.type || (schema.properties ? 'object' : (schema.items ? 'array' : 'string'));
+
+      switch (type) {
+        case 'string':
+          if (schema.format === 'date-time') return '2026-09-30T14:20:00.000Z';
+          if (schema.format === 'date') return '2026-09-30';
+          if (schema.format === 'email') return 'user@example.com';
+          if (schema.format === 'uri' || schema.format === 'url') return 'https://images.unsplash.com/photo-1552053831-71594a27632d';
+          if (schema.format === 'uuid') return 'a81d432e-b4a1-4fc6-b72e-0f8a92bc13d8';
+          if (schema.format === 'password') return '********';
+          if (propName.toLowerCase().includes('email')) return 'user@example.com';
+          if (propName.toLowerCase().includes('name')) return 'Apollo';
+          if (propName.toLowerCase().includes('status')) return 'available';
+          if (propName.toLowerCase().includes('id')) return 'usr_9824';
+          return 'sample_string';
+
+        case 'integer':
+          if (propName.toLowerCase().includes('id')) return 42;
+          if (propName.toLowerCase().includes('code')) return 200;
+          if (propName.toLowerCase().includes('count') || propName.toLowerCase().includes('qty') || propName.toLowerCase().includes('quantity')) return 1;
+          return 10;
+
+        case 'number':
+          return 29.99;
+
+        case 'boolean':
+          return true;
+
+        case 'array':
+          if (schema.items) {
+            return [generateMockFromSchema(schema.items, propName, depth + 1)];
+          }
+          return [];
+
+        case 'object':
+          if (schema.properties) {
+            const obj = {};
+            for (const [k, p] of Object.entries(schema.properties)) {
+              obj[k] = generateMockFromSchema(p, k, depth + 1);
+            }
+            return obj;
+          }
+          return {};
+
+        default:
+          return 'sample_value';
+      }
+    }
+
+    /**
+     * Flattens a nested schema into readable rows for parameter tables
+     */
+    function flattenSchemaProperties(schema, prefix = '') {
+      if (!schema) return [];
+      const rows = [];
+      const requiredSet = new Set(schema.required || []);
+
+      if (schema.properties) {
+        for (const [key, prop] of Object.entries(schema.properties)) {
+          const isReq = requiredSet.has(key);
+          const fullName = prefix ? `${prefix}.${key}` : key;
+          const type = prop.type || (prop.properties ? 'object' : (prop.items ? 'array' : 'any'));
+          const format = prop.format ? ` (${prop.format})` : '';
+          const itemsType = prop.items ? `[${prop.items.type || (prop.items.properties ? 'object' : 'any')}]` : '';
+
+          rows.push({
+            name: fullName,
+            required: isReq,
+            type: `${type}${itemsType}${format}`,
+            description: prop.description || '',
+            example: prop.example !== undefined ? JSON.stringify(prop.example) : '',
+            enum: prop.enum ? prop.enum.join(', ') : '',
+            default: prop.default !== undefined ? JSON.stringify(prop.default) : ''
+          });
+
+          if (prop.properties) {
+            rows.push(...flattenSchemaProperties(prop, fullName));
+          } else if (prop.items && prop.items.properties) {
+            rows.push(...flattenSchemaProperties(prop.items, `${fullName}[]`));
+          }
+        }
+      } else if (schema.type === 'array' && schema.items) {
+        if (schema.items.properties) {
+          rows.push(...flattenSchemaProperties(schema.items, 'item'));
+        } else {
+          rows.push({
+            name: 'item',
+            required: true,
+            type: schema.items.type || 'any',
+            description: schema.items.description || '',
+            example: schema.items.example !== undefined ? JSON.stringify(schema.items.example) : '',
+            enum: schema.items.enum ? schema.items.enum.join(', ') : '',
+            default: ''
+          });
+        }
+      }
+
+      return rows;
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Extracts an array of Example objects from OpenAPI 3.x / Swagger 2.0 definitions.
+     * Supports mediaObj.examples (map of Example Objects or $ref), mediaObj.example,
+     * schema.examples (JSON Schema array or map), schema.example, and fallback to mock generator.
+     */
+    function extractExamplesList(mediaObj, schema, rawDoc) {
+      const list = [];
+      if (!mediaObj && !schema) return list;
+
+      // 1. Check mediaObj.examples (OpenAPI 3.x Map of Example Objects or $ref)
+      if (mediaObj && mediaObj.examples && typeof mediaObj.examples === 'object') {
+        for (const [key, rawEx] of Object.entries(mediaObj.examples)) {
+          if (!rawEx) continue;
+          const ex = rawEx.$ref ? (resolveJsonPointer(rawDoc, rawEx.$ref) || rawEx) : rawEx;
+          let val = undefined;
+          if (ex.value !== undefined) {
+            val = ex.value;
+          } else if (ex.externalValue !== undefined) {
+            val = ex.externalValue;
+          } else if (typeof ex === 'object' && ex !== null && !('summary' in ex) && !('description' in ex) && !('$ref' in ex)) {
+            val = ex;
+          } else if (typeof ex !== 'object') {
+            val = ex;
+          } else {
+            val = ex.value;
+          }
+          list.push({
+            key,
+            name: ex.summary || key,
+            summary: ex.summary || '',
+            description: ex.description || '',
+            value: val
+          });
+        }
+      }
+
+      // 2. Check mediaObj.example (single example) if list is empty
+      if (list.length === 0 && mediaObj && mediaObj.example !== undefined) {
+        list.push({
+          key: 'default',
+          name: 'Default Example',
+          summary: '',
+          description: '',
+          value: mediaObj.example
+        });
+      }
+
+      // 3. Check schema.examples (Array in JSON Schema / OpenAPI 3.1 or Object)
+      if (list.length === 0 && schema && schema.examples) {
+        if (Array.isArray(schema.examples)) {
+          schema.examples.forEach((item, idx) => {
+            list.push({
+              key: `example_${idx + 1}`,
+              name: `Example ${idx + 1}`,
+              summary: '',
+              description: '',
+              value: item
+            });
+          });
+        } else if (typeof schema.examples === 'object') {
+          for (const [key, rawEx] of Object.entries(schema.examples)) {
+            const val = rawEx && typeof rawEx === 'object' && rawEx.value !== undefined ? rawEx.value : rawEx;
+            list.push({
+              key,
+              name: (rawEx && rawEx.summary) || key,
+              summary: (rawEx && rawEx.summary) || '',
+              description: (rawEx && rawEx.description) || '',
+              value: val
+            });
+          }
+        }
+      }
+
+      // 4. Check schema.example
+      if (list.length === 0 && schema && schema.example !== undefined) {
+        list.push({
+          key: 'default',
+          name: 'Default Schema Example',
+          summary: '',
+          description: '',
+          value: schema.example
+        });
+      }
+
+      // 5. Generate mock from schema if still empty
+      if (list.length === 0 && schema) {
+        const mock = generateMockFromSchema(schema);
+        if (mock !== null && mock !== undefined) {
+          list.push({
+            key: 'default',
+            name: 'Schema Template',
+            summary: 'Generated from schema definition',
+            description: '',
+            value: mock
+          });
+        }
+      }
+
+      return list;
+    }
+
+    /**
+     * ============================================================================
+     * 3. SPEC INGESTION & NORMALIZATION PIPELINE (OPENAPI 3.X & SWAGGER 2.0)
+     * ============================================================================
+     */
+    function parseOpenApiSpec(raw) {
+      if (!raw || typeof raw !== 'object') {
+        throw new Error("Invalid specification: expected a JSON object");
+      }
+
+      const isOpenApi3 = !!(raw.openapi && raw.openapi.startsWith('3.'));
+      const isSwagger2 = !!(raw.swagger && raw.swagger.startsWith('2.'));
+
+      if (!isOpenApi3 && !isSwagger2) {
+        throw new Error("Unsupported format: document must specify 'openapi: 3.x' or 'swagger: 2.0'");
+      }
+
+      // Metadata
+      const info = {
+        title: raw.info?.title || "OpenAPI Specification",
+        version: raw.info?.version || "1.0.0",
+        description: raw.info?.description || "",
+        termsOfService: raw.info?.termsOfService || "",
+        contact: raw.info?.contact || null,
+        license: raw.info?.license || null,
+      };
+
+      // Base URL resolution
+      let baseUrl = "https://api.example.com";
+      if (isOpenApi3) {
+        if (raw.servers && raw.servers.length > 0 && raw.servers[0].url) {
+          baseUrl = raw.servers[0].url;
+        }
+      } else if (isSwagger2) {
+        const scheme = (raw.schemes && raw.schemes[0]) || "https";
+        const host = raw.host || "api.example.com";
+        const basePath = raw.basePath || "";
+        baseUrl = `${scheme}://${host}${basePath}`;
+      }
+
+      const endpoints = [];
+      const paths = raw.paths || {};
+      const httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
+
+      for (const [pathStr, pathItem] of Object.entries(paths)) {
+        if (!pathItem || typeof pathItem !== 'object') continue;
+
+        // Path-level parameters
+        const pathLevelParams = Array.isArray(pathItem.parameters) ? pathItem.parameters : [];
+
+        for (const method of httpMethods) {
+          if (!pathItem[method]) continue;
+          const op = pathItem[method];
+
+          const endpointId = `${method.toLowerCase()}-${pathStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+          // Combine parameters (operation-level override path-level)
+          const opParams = Array.isArray(op.parameters) ? op.parameters : [];
+          const combinedParamsMap = new Map();
+
+          for (const p of [...pathLevelParams, ...opParams]) {
+            if (!p) continue;
+            const resolvedParam = p.$ref ? resolveJsonPointer(raw, p.$ref) || p : p;
+            const key = `${resolvedParam.in || 'query'}:${resolvedParam.name}`;
+            combinedParamsMap.set(key, resolvedParam);
+          }
+
+          const allParamsList = Array.from(combinedParamsMap.values());
+
+          let requestBody = null;
+          const normalizedParams = [];
+
+          if (isOpenApi3) {
+            for (const p of allParamsList) {
+              const paramSchema = p.schema ? dereferenceSchema(raw, p.schema) : { type: 'string' };
+              let paramExamples = [];
+              if (p.examples) {
+                paramExamples = extractExamplesList({ examples: p.examples }, paramSchema, raw);
+              } else if (p.content) {
+                const ct = Object.keys(p.content)[0];
+                if (ct && p.content[ct]) {
+                  paramExamples = extractExamplesList(p.content[ct], paramSchema, raw);
+                }
+              }
+
+              normalizedParams.push({
+                name: p.name,
+                in: p.in || 'query',
+                description: p.description || '',
+                required: !!p.required,
+                type: paramSchema.type ? (paramSchema.type + (paramSchema.items ? `[${paramSchema.items.type || 'object'}]` : '')) : 'string',
+                format: paramSchema.format || '',
+                enum: paramSchema.enum || null,
+                default: paramSchema.default ?? p.default,
+                example: p.example ?? paramSchema.example ?? (paramExamples[0]?.value) ?? (paramSchema.enum ? paramSchema.enum[0] : undefined),
+                examples: paramExamples,
+                schema: paramSchema
+              });
+            }
+
+            if (op.requestBody) {
+              const rb = op.requestBody.$ref ? resolveJsonPointer(raw, op.requestBody.$ref) || op.requestBody : op.requestBody;
+              const content = rb.content || {};
+              const contentType = Object.keys(content)[0] || 'application/json';
+              const mediaObj = content[contentType] || {};
+              const schema = mediaObj.schema ? dereferenceSchema(raw, mediaObj.schema) : null;
+              const combinedMediaObj = {
+                example: mediaObj.example ?? rb.example,
+                examples: mediaObj.examples || rb.examples
+              };
+              const examples = extractExamplesList(combinedMediaObj, schema, raw);
+              const exampleData = examples.length > 0 ? examples[0].value : (schema ? generateMockFromSchema(schema) : null);
+
+              requestBody = {
+                description: rb.description || '',
+                required: !!rb.required,
+                contentType,
+                schema,
+                examples,
+                exampleData
+              };
+            }
+          } else if (isSwagger2) {
+            for (const p of allParamsList) {
+              if (p.in === 'body') {
+                const schema = p.schema ? dereferenceSchema(raw, p.schema) : null;
+                const mediaObj = {
+                  example: p.example || p['x-example'],
+                  examples: p.examples || p['x-examples']
+                };
+                const examples = extractExamplesList(mediaObj, schema, raw);
+                const exampleData = examples.length > 0 ? examples[0].value : (schema ? generateMockFromSchema(schema) : null);
+                requestBody = {
+                  description: p.description || '',
+                  required: !!p.required,
+                  contentType: (op.consumes && op.consumes[0]) || 'application/json',
+                  schema,
+                  examples,
+                  exampleData
+                };
+              } else {
+                const paramSchema = p.schema ? dereferenceSchema(raw, p.schema) : {
+                  type: p.type || 'string',
+                  format: p.format,
+                  enum: p.enum,
+                  default: p.default,
+                  items: p.items
+                };
+                normalizedParams.push({
+                  name: p.name,
+                  in: p.in || 'query',
+                  description: p.description || '',
+                  required: !!p.required,
+                  type: p.type ? (p.type + (p.items ? `[${p.items.type || 'object'}]` : '')) : 'string',
+                  format: p.format || '',
+                  enum: p.enum || null,
+                  default: p.default,
+                  example: p['x-example'] ?? p.default,
+                  examples: [],
+                  schema: paramSchema
+                });
+              }
+            }
+          }
+
+          // Responses normalization
+          const normalizedResponses = [];
+          const responsesObj = op.responses || {};
+
+          for (const [code, respVal] of Object.entries(responsesObj)) {
+            if (!respVal) continue;
+            const resp = respVal.$ref ? resolveJsonPointer(raw, respVal.$ref) || respVal : respVal;
+
+            let schema = null;
+            let examples = [];
+            let exampleData = null;
+            let contentType = 'application/json';
+
+            if (isOpenApi3) {
+              const content = resp.content || {};
+              const firstCt = Object.keys(content)[0];
+              if (firstCt) {
+                contentType = firstCt;
+                const media = content[firstCt] || {};
+                schema = media.schema ? dereferenceSchema(raw, media.schema) : null;
+                const combinedMediaObj = {
+                  example: media.example ?? resp.example,
+                  examples: media.examples || resp.examples
+                };
+                examples = extractExamplesList(combinedMediaObj, schema, raw);
+                exampleData = examples.length > 0 ? examples[0].value : (schema ? generateMockFromSchema(schema) : null);
+              }
+            } else if (isSwagger2) {
+              contentType = (op.produces && op.produces[0]) || 'application/json';
+              schema = resp.schema ? dereferenceSchema(raw, resp.schema) : null;
+              const mediaObj = {
+                example: (resp.examples && resp.examples[contentType]) || resp.example,
+                examples: resp.examples
+              };
+              examples = extractExamplesList(mediaObj, schema, raw);
+              exampleData = examples.length > 0 ? examples[0].value : (schema ? generateMockFromSchema(schema) : null);
+            }
+
+            normalizedResponses.push({
+              statusCode: code,
+              description: resp.description || '',
+              contentType,
+              schema,
+              examples,
+              exampleData
+            });
+          }
+
+          // Sort status codes (2xx, 3xx, 4xx, 5xx, default)
+          normalizedResponses.sort((a, b) => {
+            if (a.statusCode === 'default') return 1;
+            if (b.statusCode === 'default') return -1;
+            return a.statusCode.localeCompare(b.statusCode);
+          });
+
+          const tags = (op.tags && Array.isArray(op.tags) && op.tags.length > 0) ? op.tags : ['General'];
+
+          endpoints.push({
+            id: endpointId,
+            method: method.toUpperCase(),
+            path: pathStr,
+            summary: op.summary || `${method.toUpperCase()} ${pathStr}`,
+            description: op.description || '',
+            operationId: op.operationId || '',
+            tags,
+            parameters: normalizedParams,
+            requestBody,
+            responses: normalizedResponses
+          });
+        }
+      }
+
+      // Unique tags extraction
+      const tagsMap = new Map();
+      if (Array.isArray(raw.tags)) {
+        for (const t of raw.tags) {
+          if (t && t.name) {
+            tagsMap.set(t.name, { name: t.name, description: t.description || '' });
+          }
+        }
+      }
+      for (const ep of endpoints) {
+        for (const tag of ep.tags) {
+          if (!tagsMap.has(tag)) {
+            tagsMap.set(tag, { name: tag, description: '' });
+          }
+        }
+      }
+
+      return {
+        specType: isOpenApi3 ? 'OpenAPI 3.x' : 'Swagger 2.0',
+        info,
+        baseUrl,
+        endpoints,
+        tags: Array.from(tagsMap.values())
+      };
+    }
+
+    /**
+     * ============================================================================
+     * 4. CODE SNIPPET GENERATOR (PURE ES6+ JAVASCRIPT FETCH API)
+     * ============================================================================
+     */
+    function sanitizeVarName(name) {
+      let clean = name.replace(/[^a-zA-Z0-9_$]/g, '_');
+      if (/^[0-9]/.test(clean)) clean = '_' + clean;
+      return clean;
+    }
+
+    function generateFetchCode(endpoint, baseUrl, liveParamValues = {}, liveBodyText = null) {
+      const method = endpoint.method.toUpperCase();
+      const pathParams = (endpoint.parameters || []).filter(p => p.in === 'path');
+      const queryParams = (endpoint.parameters || []).filter(p => p.in === 'query');
+      const headerParams = (endpoint.parameters || []).filter(p => p.in === 'header');
+
+      const lines = [];
+      lines.push(`// ${method} ${endpoint.path}`);
+      lines.push(`// ${endpoint.summary || 'Execute API call'}`);
+      lines.push(``);
+      lines.push(`async function executeRequest() {`);
+
+      // 1. Path parameters
+      let pathExpr = endpoint.path;
+      if (pathParams.length > 0) {
+        lines.push(`  // 1. Path parameters`);
+        for (const p of pathParams) {
+          const customVal = liveParamValues[p.name];
+          const val = customVal !== undefined ? JSON.stringify(customVal) : (p.example !== undefined ? JSON.stringify(p.example) : (p.default !== undefined ? JSON.stringify(p.default) : (p.type === 'integer' || p.type === 'number' ? '42' : '"sample-id"')));
+          lines.push(`  const ${sanitizeVarName(p.name)} = ${val};`);
+        }
+      }
+
+      for (const p of pathParams) {
+        pathExpr = pathExpr.replace(`{${p.name}}`, `\${encodeURIComponent(${sanitizeVarName(p.name)})}`);
+      }
+
+      const cleanBase = (baseUrl || 'https://api.example.com').replace(/\/$/, '');
+
+      // 2. URL & Query parameters
+      if (queryParams.length > 0) {
+        lines.push(``);
+        lines.push(`  // 2. Target URL & Query parameters`);
+        lines.push(`  const url = new URL(\`${cleanBase}${pathExpr}\`);`);
+        for (const q of queryParams) {
+          const customVal = liveParamValues[q.name];
+          const val = customVal !== undefined ? customVal : (q.example !== undefined ? q.example : (q.default !== undefined ? q.default : (q.enum ? q.enum[0] : 'sample_value')));
+          lines.push(`  url.searchParams.append('${q.name}', '${val}');`);
+        }
+      } else {
+        lines.push(``);
+        lines.push(`  // Target URL`);
+        lines.push(`  const url = new URL(\`${cleanBase}${pathExpr}\`);`);
+      }
+
+      // 3. Headers
+      lines.push(``);
+      lines.push(`  // 3. Request headers`);
+      lines.push(`  const headers = {`);
+      lines.push(`    'Accept': 'application/json',`);
+      if (endpoint.requestBody) {
+        lines.push(`    'Content-Type': '${endpoint.requestBody.contentType || 'application/json'}',`);
+      }
+      for (const h of headerParams) {
+        const customVal = liveParamValues[h.name];
+        const val = customVal !== undefined ? customVal : (h.example || h.default || 'demo_token');
+        lines.push(`    '${h.name}': '${val}',`);
+      }
+      lines.push(`  };`);
+
+      // 4. Request Payload
+      let hasBody = false;
+      if (endpoint.requestBody && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        hasBody = true;
+        let mock = endpoint.requestBody.exampleData || {};
+        if (liveBodyText) {
+          try {
+            mock = JSON.parse(liveBodyText);
+          } catch (e) {
+            // fallback to mock
+          }
+        }
+        const formatted = JSON.stringify(mock, null, 2).split('\n').map((l, i) => i === 0 ? l : '  ' + l).join('\n');
+        lines.push(``);
+        lines.push(`  // 4. Request payload`);
+        lines.push(`  const payload = ${formatted};`);
+      }
+
+      // 5. Fetch Execution
+      lines.push(``);
+      lines.push(`  try {`);
+      lines.push(`    const response = await fetch(url.toString(), {`);
+      lines.push(`      method: '${method}',`);
+      lines.push(`      headers,`);
+      if (hasBody) {
+        lines.push(`      body: JSON.stringify(payload),`);
+      }
+      lines.push(`    });`);
+      lines.push(``);
+      lines.push(`    if (!response.ok) {`);
+      lines.push(`      throw new Error(\`HTTP error \${response.status}: \${response.statusText}\`);`);
+      lines.push(`    }`);
+      lines.push(``);
+      lines.push(`    const data = await response.json();`);
+      lines.push(`    console.log('Response data:', data);`);
+      lines.push(`    return data;`);
+      lines.push(`  } catch (error) {`);
+      lines.push(`    console.error('Request failed:', error);`);
+      lines.push(`    throw error;`);
+      lines.push(`  }`);
+      lines.push(`}`);
+      lines.push(``);
+      lines.push(`// Execute API invocation`);
+      lines.push(`executeRequest();`);
+
+      return lines.join('\n');
+    }
+
+    /**
+     * cURL Command Generator
+     */
+    function generateCurlCode(endpoint, baseUrl, liveParamValues = {}, liveBodyText = null) {
+      const method = endpoint.method.toUpperCase();
+      const pathParams = (endpoint.parameters || []).filter(p => p.in === 'path');
+      const queryParams = (endpoint.parameters || []).filter(p => p.in === 'query');
+      const headerParams = (endpoint.parameters || []).filter(p => p.in === 'header');
+
+      let pathExpr = endpoint.path;
+      for (const p of pathParams) {
+        const val = liveParamValues[p.name] !== undefined ? liveParamValues[p.name] : (p.example !== undefined ? p.example : (p.default !== undefined ? p.default : '42'));
+        pathExpr = pathExpr.replace(`{${p.name}}`, encodeURIComponent(val));
+      }
+
+      const cleanBase = (baseUrl || 'https://api.example.com').replace(/\/$/, '');
+      let fullUrl = `${cleanBase}${pathExpr}`;
+
+      if (queryParams.length > 0) {
+        const qParts = [];
+        for (const q of queryParams) {
+          const val = liveParamValues[q.name] !== undefined ? liveParamValues[q.name] : (q.example !== undefined ? q.example : (q.default !== undefined ? q.default : (q.enum ? q.enum[0] : 'sample_value')));
+          qParts.push(`${encodeURIComponent(q.name)}=${encodeURIComponent(val)}`);
+        }
+        fullUrl += `?${qParts.join('&')}`;
+      }
+
+      const lines = [];
+      lines.push(`curl -X ${method} "${fullUrl}" \\`);
+      lines.push(`  -H "Accept: application/json" \\`);
+
+      if (endpoint.requestBody) {
+        lines.push(`  -H "Content-Type: ${endpoint.requestBody.contentType || 'application/json'}" \\`);
+      }
+
+      for (let i = 0; i < headerParams.length; i++) {
+        const h = headerParams[i];
+        const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
+        lines.push(`  -H "${h.name}: ${val}" \\`);
+      }
+
+      if (endpoint.requestBody && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        let mock = endpoint.requestBody.exampleData || {};
+        if (liveBodyText) {
+          try { mock = JSON.parse(liveBodyText); } catch (e) {}
+        }
+        const jsonStr = JSON.stringify(mock, null, 2);
+        const escapedJson = jsonStr.replace(/'/g, `'\\''`);
+        lines.push(`  -d '${escapedJson}'`);
+      }
+
+      const lastIdx = lines.length - 1;
+      lines[lastIdx] = lines[lastIdx].replace(/\s*\\$/, '');
+
+      return lines.join('\n');
+    }
+
+    /**
+     * PHP (cURL) Code Generator
+     */
+    function toPhpArray(obj, indent = 0) {
+      if (obj === null) return 'null';
+      if (typeof obj === 'boolean') return obj ? 'true' : 'false';
+      if (typeof obj === 'number') return String(obj);
+      if (typeof obj === 'string') return JSON.stringify(obj);
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        const spaces = ' '.repeat(indent);
+        const innerSpaces = ' '.repeat(indent + 4);
+        const items = obj.map(item => `${innerSpaces}${toPhpArray(item, indent + 4)}`).join(',\n');
+        return `[\n${items}\n${spaces}]`;
+      }
+      if (typeof obj === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) return '[]';
+        const spaces = ' '.repeat(indent);
+        const innerSpaces = ' '.repeat(indent + 4);
+        const items = keys.map(k => `${innerSpaces}${JSON.stringify(k)} => ${toPhpArray(obj[k], indent + 4)}`).join(',\n');
+        return `[\n${items}\n${spaces}]`;
+      }
+      return 'null';
+    }
+
+    function generatePhpCode(endpoint, baseUrl, liveParamValues = {}, liveBodyText = null) {
+      const method = endpoint.method.toUpperCase();
+      const pathParams = (endpoint.parameters || []).filter(p => p.in === 'path');
+      const queryParams = (endpoint.parameters || []).filter(p => p.in === 'query');
+      const headerParams = (endpoint.parameters || []).filter(p => p.in === 'header');
+
+      let pathExpr = endpoint.path;
+      for (const p of pathParams) {
+        const val = liveParamValues[p.name] !== undefined ? liveParamValues[p.name] : (p.example !== undefined ? p.example : '42');
+        pathExpr = pathExpr.replace(`{${p.name}}`, val);
+      }
+
+      const cleanBase = (baseUrl || 'https://api.example.com').replace(/\/$/, '');
+      const lines = [];
+      lines.push(`<?php`);
+      lines.push(`// ${method} ${endpoint.path} - ${endpoint.summary || 'API Request'}`);
+      lines.push(``);
+
+      if (queryParams.length > 0) {
+        lines.push(`$queryParams = http_build_query([`);
+        for (const q of queryParams) {
+          const val = liveParamValues[q.name] !== undefined ? liveParamValues[q.name] : (q.example !== undefined ? q.example : (q.default !== undefined ? q.default : 'sample'));
+          lines.push(`    "${q.name}" => ${JSON.stringify(val)},`);
+        }
+        lines.push(`]);`);
+        lines.push(`$url = "${cleanBase}${pathExpr}?" . $queryParams;`);
+      } else {
+        lines.push(`$url = "${cleanBase}${pathExpr}";`);
+      }
+
+      lines.push(``);
+      lines.push(`$headers = [`);
+      lines.push(`    "Accept: application/json",`);
+      if (endpoint.requestBody) {
+        lines.push(`    "Content-Type: ${endpoint.requestBody.contentType || 'application/json'}",`);
+      }
+      for (const h of headerParams) {
+        const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
+        lines.push(`    "${h.name}: ${val}",`);
+      }
+      lines.push(`];`);
+
+      let hasBody = false;
+      if (endpoint.requestBody && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        hasBody = true;
+        let mock = endpoint.requestBody.exampleData || {};
+        if (liveBodyText) {
+          try { mock = JSON.parse(liveBodyText); } catch (e) {}
+        }
+        lines.push(``);
+        lines.push(`$payload = ` + toPhpArray(mock, 0) + `;`);
+      }
+
+      lines.push(``);
+      lines.push(`$ch = curl_init();`);
+      lines.push(`curl_setopt_array($ch, [`);
+      lines.push(`    CURLOPT_URL => $url,`);
+      lines.push(`    CURLOPT_RETURNTRANSFER => true,`);
+      lines.push(`    CURLOPT_CUSTOMREQUEST => "${method}",`);
+      lines.push(`    CURLOPT_HTTPHEADER => $headers,`);
+      if (hasBody) {
+        lines.push(`    CURLOPT_POSTFIELDS => json_encode($payload),`);
+      }
+      lines.push(`]);`);
+      lines.push(``);
+      lines.push(`$response = curl_exec($ch);`);
+      lines.push(`$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);`);
+      lines.push(``);
+      lines.push(`if (curl_errno($ch)) {`);
+      lines.push(`    echo "cURL Error: " . curl_error($ch) . "\\n";`);
+      lines.push(`} else {`);
+      lines.push(`    echo "HTTP Status: {$httpCode}\\n";`);
+      lines.push(`    echo $response . "\\n";`);
+      lines.push(`}`);
+      lines.push(``);
+      lines.push(`curl_close($ch);`);
+
+      return lines.join('\n');
+    }
+
+    /**
+     * Golang (net/http) Code Generator
+     */
+    function generateGolangCode(endpoint, baseUrl, liveParamValues = {}, liveBodyText = null) {
+      const method = endpoint.method.toUpperCase();
+      const pathParams = (endpoint.parameters || []).filter(p => p.in === 'path');
+      const queryParams = (endpoint.parameters || []).filter(p => p.in === 'query');
+      const headerParams = (endpoint.parameters || []).filter(p => p.in === 'header');
+
+      let pathExpr = endpoint.path;
+      for (const p of pathParams) {
+        const val = liveParamValues[p.name] !== undefined ? liveParamValues[p.name] : (p.example !== undefined ? p.example : '42');
+        pathExpr = pathExpr.replace(`{${p.name}}`, val);
+      }
+
+      const cleanBase = (baseUrl || 'https://api.example.com').replace(/\/$/, '');
+      const hasBody = endpoint.requestBody && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+      const lines = [];
+      lines.push(`package main`);
+      lines.push(``);
+      lines.push(`import (`);
+      if (hasBody) lines.push(`\t"bytes"`);
+      lines.push(`\t"fmt"`);
+      lines.push(`\t"io"`);
+      lines.push(`\t"log"`);
+      lines.push(`\t"net/http"`);
+      if (queryParams.length > 0) lines.push(`\t"net/url"`);
+      lines.push(`)`);
+      lines.push(``);
+      lines.push(`func main() {`);
+
+      if (queryParams.length > 0) {
+        lines.push(`\tbaseURL, err := url.Parse("${cleanBase}${pathExpr}")`);
+        lines.push(`\tif err != nil {`);
+        lines.push(`\t\tlog.Fatalf("URL parse error: %v", err)`);
+        lines.push(`\t}`);
+        lines.push(`\tparams := url.Values{}`);
+        for (const q of queryParams) {
+          const val = liveParamValues[q.name] !== undefined ? liveParamValues[q.name] : (q.example !== undefined ? q.example : (q.default !== undefined ? q.default : 'sample'));
+          lines.push(`\tparams.Add("${q.name}", "${val}")`);
+        }
+        lines.push(`\tbaseURL.RawQuery = params.Encode()`);
+        lines.push(`\tapiURL := baseURL.String()`);
+      } else {
+        lines.push(`\tapiURL := "${cleanBase}${pathExpr}"`);
+      }
+
+      if (hasBody) {
+        let mock = endpoint.requestBody.exampleData || {};
+        if (liveBodyText) {
+          try { mock = JSON.parse(liveBodyText); } catch (e) {}
+        }
+        const jsonStr = JSON.stringify(mock, null, 2);
+        lines.push(``);
+        lines.push(`\tpayload := []byte(\`${jsonStr}\`)`);
+        lines.push(`\treq, err := http.NewRequest("${method}", apiURL, bytes.NewBuffer(payload))`);
+      } else {
+        lines.push(``);
+        lines.push(`\treq, err := http.NewRequest("${method}", apiURL, nil)`);
+      }
+
+      lines.push(`\tif err != nil {`);
+      lines.push(`\t\tlog.Fatalf("Request build error: %v", err)`);
+      lines.push(`\t}`);
+      lines.push(``);
+      lines.push(`\treq.Header.Set("Accept", "application/json")`);
+      if (endpoint.requestBody) {
+        lines.push(`\treq.Header.Set("Content-Type", "${endpoint.requestBody.contentType || 'application/json'}")`);
+      }
+      for (const h of headerParams) {
+        const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
+        lines.push(`\treq.Header.Set("${h.name}", "${val}")`);
+      }
+
+      lines.push(``);
+      lines.push(`\tclient := &http.Client{}`);
+      lines.push(`\tresp, err := client.Do(req)`);
+      lines.push(`\tif err != nil {`);
+      lines.push(`\t\tlog.Fatalf("Request execution error: %v", err)`);
+      lines.push(`\t}`);
+      lines.push(`\tdefer resp.Body.Close()`);
+      lines.push(``);
+      lines.push(`\tbody, err := io.ReadAll(resp.Body)`);
+      lines.push(`\tif err != nil {`);
+      lines.push(`\t\tlog.Fatalf("Read body error: %v", err)`);
+      lines.push(`\t}`);
+      lines.push(``);
+      lines.push(`\tfmt.Printf("HTTP Status: %s\\n", resp.Status)`);
+      lines.push(`\tfmt.Println(string(body))`);
+      lines.push(`}`);
+
+      return lines.join('\n');
+    }
+
+    /**
+     * Unified Multi-Language Code Dispatcher
+     */
+    function generateCodeForLang(lang, endpoint, baseUrl, liveParamValues = {}, liveBodyText = null) {
+      switch (lang) {
+        case 'curl':
+          return generateCurlCode(endpoint, baseUrl, liveParamValues, liveBodyText);
+        case 'javascript':
+        case 'js':
+          return generateFetchCode(endpoint, baseUrl, liveParamValues, liveBodyText);
+        case 'php':
+          return generatePhpCode(endpoint, baseUrl, liveParamValues, liveBodyText);
+        case 'golang':
+        case 'go':
+          return generateGolangCode(endpoint, baseUrl, liveParamValues, liveBodyText);
+        default:
+          return generateCurlCode(endpoint, baseUrl, liveParamValues, liveBodyText);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 5. SAFE MARKDOWN RENDERING HELPER
+     * ============================================================================
+     */
+    function renderMarkdown(md) {
+      if (!md) return '';
+      // Escape HTML entities to protect against XSS
+      let out = md
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      // Headings
+      out = out.replace(/^### (.*$)/gim, '<h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-3 mb-1">$1</h4>');
+      out = out.replace(/^## (.*$)/gim, '<h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mt-4 mb-1">$1</h3>');
+      out = out.replace(/^# (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-4 mb-2">$1</h2>');
+
+      // Bold & Italic
+      out = out.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      out = out.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>');
+      out = out.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+
+      // Monospace code
+      out = out.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-medium">$1</code>');
+
+      // Hyperlinks
+      out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>');
+
+      // Bullet lists
+      out = out.replace(/^\s*-\s+(.*$)/gim, '<li class="ml-4 list-disc text-slate-600 dark:text-slate-400">$1</li>');
+
+      // Paragraphs
+      out = out.replace(/\n\n+/g, '</p><p class="mt-2 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">');
+
+      return `<div class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed"><p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${out}</p></div>`;
+    }
+
+    /**
+     * Built-in Pure Vanilla JS Syntax Highlighting Engine (Atom One Dark theme)
+     * Provides instant, reliable syntax highlighting with Highlight.js integration and pure-JS fallback.
+     */
+    function highlightJsFallback(code) {
+      let html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const tokens = [];
+      const addToken = (cls, content) => {
+        const id = `___TOKEN_${tokens.length}___`;
+        tokens.push(`<span class="${cls}">${content}</span>`);
+        return id;
+      };
+
+      // 1. Strings (template literals, double quotes, single quotes)
+      html = html.replace(/(`(?:\\`|[\s\S])*?`|"(?:\\"|[^"\n])*"|'(?:\\'|[^'\n])*')/g, (m) => addToken('token-string hljs-string', m));
+
+      // 2. Comments (// ... or /* ... */)
+      html = html.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, (m) => addToken('token-comment hljs-comment', m));
+
+      // 3. Keywords
+      html = html.replace(/\b(async|await|function|const|let|var|try|catch|finally|throw|return|if|else|for|while|switch|case|break|default|new|typeof|instanceof|class|extends|import|export|from)\b/g, '<span class="token-keyword hljs-keyword">$1</span>');
+
+      // 4. Built-ins
+      html = html.replace(/\b(URL|URLSearchParams|fetch|JSON|console|Promise|Error|encodeURIComponent|Response|Request|Headers)\b/g, '<span class="token-builtin hljs-built_in">$1</span>');
+
+      // 5. Booleans, null, numbers
+      html = html.replace(/\b(true|false|null|undefined)\b/g, '<span class="token-boolean hljs-literal">$1</span>');
+      html = html.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="token-number hljs-number">$1</span>');
+
+      // 6. Function declarations & calls
+      html = html.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)(?=\s*\()/g, '<span class="token-function hljs-title function_">$1</span>');
+
+      // Restore string & comment tokens
+      for (let i = 0; i < tokens.length; i++) {
+        html = html.replace(`___TOKEN_${i}___`, tokens[i]);
+      }
+
+      return html;
+    }
+
+    function highlightJsonFallback(jsonStr) {
+      let html = jsonStr
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      return html.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function (match) {
+          let cls = 'token-number hljs-number';
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = 'token-key hljs-attr';
+            } else {
+              cls = 'token-string hljs-string';
+            }
+          } else if (/true|false/.test(match)) {
+            cls = 'token-boolean hljs-literal';
+          } else if (/null/.test(match)) {
+            cls = 'token-null hljs-literal';
+          }
+          return `<span class="${cls}">${match}</span>`;
+        }
+      );
+    }
+
+    function highlightBashFallback(code) {
+      let html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const tokens = [];
+      const addToken = (cls, content) => {
+        const id = `___TOKEN_${tokens.length}___`;
+        tokens.push(`<span class="${cls}">${content}</span>`);
+        return id;
+      };
+
+      // Strings (double quotes and single quotes)
+      html = html.replace(/("(?:\\"|[^"\n])*"|'(?:\\'|[^'\n])*')/g, (m) => addToken('token-string hljs-string', m));
+
+      // Comments
+      html = html.replace(/(#[^\n]*)/g, (m) => addToken('token-comment hljs-comment', m));
+
+      // Flags (-X, -H, -d, etc.)
+      html = html.replace(/(\s)(-[a-zA-Z0-9]+|--[a-zA-Z0-9-]+)/g, '$1<span class="token-param hljs-attribute">$2</span>');
+
+      // Commands
+      html = html.replace(/\b(curl|cat|echo|grep|awk|sed)\b/g, '<span class="token-keyword hljs-keyword">$1</span>');
+
+      for (let i = 0; i < tokens.length; i++) {
+        html = html.replace(`___TOKEN_${i}___`, tokens[i]);
+      }
+      return html;
+    }
+
+    function highlightPhpFallback(code) {
+      let html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const tokens = [];
+      const addToken = (cls, content) => {
+        const id = `___TOKEN_${tokens.length}___`;
+        tokens.push(`<span class="${cls}">${content}</span>`);
+        return id;
+      };
+
+      // Strings
+      html = html.replace(/("(?:\\"|[^"\n])*"|'(?:\\'|[^'\n])*')/g, (m) => addToken('token-string hljs-string', m));
+
+      // Comments
+      html = html.replace(/(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/)/g, (m) => addToken('token-comment hljs-comment', m));
+
+      // PHP tags
+      html = html.replace(/(&lt;\?php|\?&gt;)/g, '<span class="token-tag hljs-meta">$1</span>');
+
+      // Variables ($var)
+      html = html.replace(/(\$[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)/g, '<span class="token-variable hljs-variable">$1</span>');
+
+      // Keywords
+      html = html.replace(/\b(echo|return|if|else|function|array|true|false|null|new|class|public|private|protected|foreach|as|while)\b/g, '<span class="token-keyword hljs-keyword">$1</span>');
+
+      // Functions
+      html = html.replace(/\b(curl_init|curl_setopt_array|curl_exec|curl_getinfo|curl_errno|curl_error|curl_close|json_encode|json_decode|http_build_query)\b/g, '<span class="token-function hljs-title function_">$1</span>');
+
+      for (let i = 0; i < tokens.length; i++) {
+        html = html.replace(`___TOKEN_${i}___`, tokens[i]);
+      }
+      return html;
+    }
+
+    function highlightGoFallback(code) {
+      let html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const tokens = [];
+      const addToken = (cls, content) => {
+        const id = `___TOKEN_${tokens.length}___`;
+        tokens.push(`<span class="${cls}">${content}</span>`);
+        return id;
+      };
+
+      // Strings
+      html = html.replace(/(`(?:\\`|[\s\S])*?`|"(?:\\"|[^"\n])*")/g, (m) => addToken('token-string hljs-string', m));
+
+      // Comments
+      html = html.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, (m) => addToken('token-comment hljs-comment', m));
+
+      // Keywords
+      html = html.replace(/\b(package|import|func|var|const|type|struct|if|else|return|nil|true|false|defer|for|range|switch|case)\b/g, '<span class="token-keyword hljs-keyword">$1</span>');
+
+      // Packages & types
+      html = html.replace(/\b(main|string|byte|int|int64|float64|bool|error|fmt|http|url|io|log|bytes)\b/g, '<span class="token-builtin hljs-built_in">$1</span>');
+
+      // Functions
+      html = html.replace(/\b([a-zA-Z_$][a-zA-Z0-9_$]*)(?=\s*\()/g, '<span class="token-function hljs-title function_">$1</span>');
+
+      for (let i = 0; i < tokens.length; i++) {
+        html = html.replace(`___TOKEN_${i}___`, tokens[i]);
+      }
+      return html;
+    }
+
+    function highlightCode(code, lang = 'curl') {
+      if (!code) return '';
+      const langMap = {
+        'curl': 'bash',
+        'bash': 'bash',
+        'javascript': 'javascript',
+        'js': 'javascript',
+        'php': 'php',
+        'golang': 'go',
+        'go': 'go',
+        'json': 'json'
+      };
+      const hljsLang = langMap[lang] || lang;
+      if (typeof hljs !== 'undefined' && typeof hljs.highlight === 'function') {
+        try {
+          const res = hljs.highlight(code, { language: hljsLang, ignoreIllegals: true });
+          if (res && res.value) {
+            return res.value;
+          }
+        } catch (e) {
+          // Fall back gracefully
+        }
+      }
+      if (lang === 'json') return highlightJsonFallback(code);
+      if (lang === 'curl' || lang === 'bash') return highlightBashFallback(code);
+      if (lang === 'php') return highlightPhpFallback(code);
+      if (lang === 'golang' || lang === 'go') return highlightGoFallback(code);
+      return highlightJsFallback(code);
+    }
+
+    /**
+     * ============================================================================
+     * 6. CENTRAL STATE MANAGEMENT
+     * ============================================================================
+     */
+    const state = {
+      rawSpec: null,
+      parsedSpec: null,
+      selectedEndpointId: null,
+      filterText: '',
+      selectedTag: 'all',
+      activeResponseCode: null,
+      activeResponseExampleKey: null,   // key of active response example
+      activeRequestBodyTab: 'example', // 'example' | 'schema'
+      activeRequestBodyExampleKey: null, // key of active request body example
+      activeRightTab: 'code',          // 'code' | 'try'
+      activeMobileTab: 'docs',         // 'docs' | 'code'
+      selectedCodeLang: 'curl',        // 'curl' | 'javascript' | 'php' | 'golang'
+      mobileNavOpen: false,
+      darkMode: false,
+      liveParamValues: {},
+      liveBodyText: null,
+      tryRequestState: {
+        loading: false,
+        statusCode: null,
+        statusText: null,
+        timeMs: null,
+        body: null,
+        error: null
+      }
+    };
+
+    /**
+     * ============================================================================
+     * 7. STATE ACTIONS & DISPATCH PIPELINE
+     * ============================================================================
+     */
+    function setSpec(rawJson) {
+      try {
+        const parsed = parseOpenApiSpec(rawJson);
+        state.rawSpec = rawJson;
+        state.parsedSpec = parsed;
+        state.filterText = '';
+        state.selectedTag = 'all';
+
+        // Select first endpoint by default
+        if (parsed.endpoints.length > 0) {
+          selectEndpoint(parsed.endpoints[0].id, false);
+        } else {
+          state.selectedEndpointId = null;
+        }
+
+        clearAlert();
+        renderHeader();
+        renderSidebar();
+        renderDetails();
+        renderCodeSnippet();
+        renderInteractiveClient();
+
+        showToast(`Loaded ${parsed.info.title} (${parsed.endpoints.length} endpoints)`, 'success');
+      } catch (err) {
+        console.error("Failed to load specification:", err);
+        showAlert(`Specification Error: ${err.message}`);
+        showToast("Failed to parse OpenAPI JSON", "error");
+      }
+    }
+
+    function selectEndpoint(endpointId, updateUrlHash = true) {
+      state.selectedEndpointId = endpointId;
+      const endpoint = getSelectedEndpoint();
+      if (endpoint && endpoint.responses.length > 0) {
+        state.activeResponseCode = endpoint.responses[0].statusCode;
+        state.activeResponseExampleKey = endpoint.responses[0].examples?.[0]?.key || null;
+      } else {
+        state.activeResponseCode = null;
+        state.activeResponseExampleKey = null;
+      }
+
+      // Initialize live param values from defaults / examples
+      state.liveParamValues = {};
+      if (endpoint) {
+        for (const p of endpoint.parameters) {
+          if (p.example !== undefined) state.liveParamValues[p.name] = p.example;
+          else if (p.default !== undefined) state.liveParamValues[p.name] = p.default;
+          else if (p.enum && p.enum.length > 0) state.liveParamValues[p.name] = p.enum[0];
+          else state.liveParamValues[p.name] = p.type === 'integer' || p.type === 'number' ? '42' : 'sample_value';
+        }
+        if (endpoint.requestBody && endpoint.requestBody.examples && endpoint.requestBody.examples.length > 0) {
+          const firstEx = endpoint.requestBody.examples[0];
+          state.activeRequestBodyExampleKey = firstEx.key;
+          state.liveBodyText = JSON.stringify(firstEx.value, null, 2);
+        } else if (endpoint.requestBody && endpoint.requestBody.exampleData) {
+          state.activeRequestBodyExampleKey = 'default';
+          state.liveBodyText = JSON.stringify(endpoint.requestBody.exampleData, null, 2);
+        } else {
+          state.activeRequestBodyExampleKey = null;
+          state.liveBodyText = '';
+        }
+      }
+
+      // Reset live try response
+      state.tryRequestState = {
+        loading: false,
+        statusCode: null,
+        statusText: null,
+        timeMs: null,
+        body: null,
+        error: null
+      };
+
+      if (state.mobileNavOpen) {
+        toggleMobileDrawer(false);
+      }
+
+      // Targeted UI updates
+      renderSidebar();
+      renderDetails();
+      renderCodeSnippet();
+      renderInteractiveClient();
+
+      // Scroll docs column to top smoothly
+      const docsEl = document.getElementById('docs-container');
+      if (docsEl) docsEl.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setFilterText(text) {
+      state.filterText = (text || '').trim().toLowerCase();
+      const clearBtn = document.getElementById('btn-clear-search');
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', state.filterText.length === 0);
+      }
+      renderSidebar();
+    }
+
+    function setSelectedTag(tag) {
+      state.selectedTag = tag;
+      renderSidebar();
+    }
+
+    function setActiveResponseCode(code) {
+      state.activeResponseCode = code;
+      const endpoint = getSelectedEndpoint();
+      const resp = endpoint?.responses?.find(r => r.statusCode === code);
+      state.activeResponseExampleKey = resp?.examples?.[0]?.key || null;
+      renderResponsesSection();
+    }
+
+    function setResponseExample(exampleKey) {
+      state.activeResponseExampleKey = exampleKey;
+      renderResponsesSection();
+    }
+
+    function setRequestBodyExample(exampleKey) {
+      const endpoint = getSelectedEndpoint();
+      if (!endpoint || !endpoint.requestBody || !endpoint.requestBody.examples) return;
+
+      const ex = endpoint.requestBody.examples.find(e => e.key === exampleKey);
+      if (!ex) return;
+
+      state.activeRequestBodyExampleKey = exampleKey;
+      state.liveBodyText = JSON.stringify(ex.value, null, 2);
+
+      renderRequestBodySection();
+      renderCodeSnippet();
+      renderInteractiveClient();
+    }
+
+    function setRequestBodyTab(tab) {
+      state.activeRequestBodyTab = tab;
+      renderRequestBodySection();
+    }
+
+    function setSelectedCodeLang(lang) {
+      state.selectedCodeLang = lang;
+      state.activeRightTab = 'code';
+      const codePanel = document.getElementById('panel-code-snippet');
+      const tryPanel = document.getElementById('panel-interactive-try');
+      if (codePanel) codePanel.classList.remove('hidden');
+      if (tryPanel) tryPanel.classList.add('hidden');
+      renderCodeSnippet();
+    }
+
+    function toggleInteractiveTest() {
+      if (state.activeRightTab === 'try') {
+        setSelectedCodeLang(state.selectedCodeLang || 'curl');
+      } else {
+        setRightTab('try');
+      }
+    }
+
+    function updateLanguageControls(lang) {
+      const mobileSelect = document.getElementById('select-code-lang-mobile');
+      if (mobileSelect && mobileSelect.value !== lang) {
+        mobileSelect.value = lang;
+      }
+
+      const pillContainer = document.getElementById('desktop-lang-pills');
+      if (pillContainer) {
+        const btns = pillContainer.querySelectorAll('.lang-tab-btn');
+        btns.forEach(btn => {
+          const btnLang = btn.getAttribute('data-lang');
+          if (state.activeRightTab === 'code' && btnLang === lang) {
+            btn.className = 'lang-tab-btn px-2.5 py-1 rounded-md bg-blue-600 text-white shadow-sm transition font-medium';
+          } else {
+            btn.className = 'lang-tab-btn px-2.5 py-1 rounded-md text-slate-300 hover:text-white transition font-medium';
+          }
+        });
+      }
+
+      const tryBtn = document.getElementById('btn-toggle-interactive-test');
+      if (tryBtn) {
+        if (state.activeRightTab === 'try') {
+          tryBtn.className = 'px-2 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-sm transition flex items-center gap-1';
+        } else {
+          tryBtn.className = 'px-2 py-1 text-xs font-medium rounded-md text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent transition flex items-center gap-1';
+        }
+      }
+    }
+
+    function setRightTab(tab) {
+      state.activeRightTab = tab;
+      const codePanel = document.getElementById('panel-code-snippet');
+      const tryPanel = document.getElementById('panel-interactive-try');
+
+      if (tab === 'code') {
+        if (codePanel) codePanel.classList.remove('hidden');
+        if (tryPanel) tryPanel.classList.add('hidden');
+      } else {
+        if (codePanel) codePanel.classList.add('hidden');
+        if (tryPanel) tryPanel.classList.remove('hidden');
+      }
+      updateLanguageControls(state.selectedCodeLang || 'curl');
+    }
+
+    function setMobileTab(tab) {
+      state.activeMobileTab = tab;
+      const docsBtn = document.getElementById('mobile-tab-docs');
+      const codeBtn = document.getElementById('mobile-tab-code');
+      const docsCol = document.getElementById('docs-container');
+      const codeCol = document.getElementById('code-container');
+
+      if (tab === 'docs') {
+        docsBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-md transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white flex items-center justify-center gap-1.5';
+        codeBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5';
+        docsCol.classList.remove('hidden');
+        codeCol.classList.add('hidden');
+        codeCol.classList.remove('flex');
+      } else {
+        codeBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-md transition shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white flex items-center justify-center gap-1.5';
+        docsBtn.className = 'flex-1 py-1.5 text-xs font-medium rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5';
+        docsCol.classList.add('hidden');
+        codeCol.classList.remove('hidden');
+        codeCol.classList.add('flex', 'w-full');
+      }
+    }
+
+    function toggleMobileDrawer(open) {
+      state.mobileNavOpen = open;
+      const sidebar = document.getElementById('sidebar-container');
+      const backdrop = document.getElementById('mobile-drawer-backdrop');
+
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function toggleDarkMode() {
+      state.darkMode = !state.darkMode;
+      if (state.darkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+      lucide.createIcons();
+    }
+
+    function getSelectedEndpoint() {
+      if (!state.parsedSpec) return null;
+      return state.parsedSpec.endpoints.find(e => e.id === state.selectedEndpointId) || state.parsedSpec.endpoints[0] || null;
+    }
+
+    /**
+     * ============================================================================
+     * 8. RENDERING FUNCTIONS
+     * ============================================================================
+     */
+    function getMethodBadgeHtml(method, size = 'sm') {
+      const m = method.toUpperCase();
+      let colorClasses = '';
+
+      switch (m) {
+        case 'GET':
+          colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/80';
+          break;
+        case 'POST':
+          colorClasses = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-800/80';
+          break;
+        case 'PUT':
+          colorClasses = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800/80';
+          break;
+        case 'PATCH':
+          colorClasses = 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-400 dark:border-orange-800/80';
+          break;
+        case 'DELETE':
+          colorClasses = 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800/80';
+          break;
+        default:
+          colorClasses = 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+      }
+
+      if (size === 'lg') {
+        return `<span class="inline-flex items-center justify-center font-mono font-bold text-xs uppercase px-2.5 py-1 rounded-md border tracking-wide ${colorClasses}">${m}</span>`;
+      }
+      return `<span class="inline-flex items-center justify-center font-mono font-bold text-[10px] uppercase w-12 px-1 py-0.5 rounded border tracking-tight ${colorClasses}">${m}</span>`;
+    }
+
+    function renderHeader() {
+      if (!state.parsedSpec) return;
+      const { info, specType, baseUrl } = state.parsedSpec;
+
+      document.getElementById('header-api-title').textContent = info.title;
+      document.getElementById('header-api-version').textContent = `v${info.version}`;
+      document.getElementById('header-spec-type').textContent = specType;
+    }
+
+    function renderSidebar() {
+      const navEl = document.getElementById('nav-endpoints-tree');
+      const tagFilterContainer = document.getElementById('tag-filter-pills');
+      const counterEl = document.getElementById('sidebar-endpoint-counter');
+      if (!navEl || !state.parsedSpec) return;
+
+      const { endpoints, tags } = state.parsedSpec;
+      const query = state.filterText;
+      const selectedTag = state.selectedTag;
+
+      // Filter endpoints
+      const filtered = endpoints.filter(ep => {
+        const matchesTag = selectedTag === 'all' || ep.tags.includes(selectedTag);
+        if (!matchesTag) return false;
+
+        if (!query) return true;
+        return (
+          ep.path.toLowerCase().includes(query) ||
+          ep.summary.toLowerCase().includes(query) ||
+          ep.method.toLowerCase().includes(query) ||
+          ep.tags.some(t => t.toLowerCase().includes(query))
+        );
+      });
+
+      counterEl.textContent = `${filtered.length} of ${endpoints.length} endpoints`;
+
+      // Render Tag Filter Pills
+      let tagHtml = `
+        <button 
+          data-tag="all" 
+          class="tag-filter-btn px-2 py-0.5 text-[11px] rounded-full font-medium whitespace-nowrap transition border ${selectedTag === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'}"
+        >
+          All (${endpoints.length})
+        </button>
+      `;
+
+      for (const t of tags) {
+        const count = endpoints.filter(e => e.tags.includes(t.name)).length;
+        if (count === 0) continue;
+        const isSel = selectedTag === t.name;
+        tagHtml += `
+          <button 
+            data-tag="${t.name}" 
+            class="tag-filter-btn px-2 py-0.5 text-[11px] rounded-full font-medium whitespace-nowrap transition border ${isSel ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'}"
+          >
+            ${t.name} (${count})
+          </button>
+        `;
+      }
+      tagFilterContainer.innerHTML = tagHtml;
+
+      // Empty State
+      if (filtered.length === 0) {
+        navEl.innerHTML = `
+          <div class="p-6 text-center text-slate-400 dark:text-slate-500">
+            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-60"></i>
+            <p class="text-xs font-medium">No endpoints matching</p>
+            <p class="text-[11px] font-mono mt-0.5 text-slate-500">"${query}"</p>
+            <button id="btn-reset-filter" class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">Clear search</button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      // Group endpoints by Tag
+      const grouped = {};
+      for (const ep of filtered) {
+        const primaryTag = ep.tags[0] || 'General';
+        if (!grouped[primaryTag]) grouped[primaryTag] = [];
+        grouped[primaryTag].push(ep);
+      }
+
+      let navHtml = '';
+      for (const [tagName, groupEndpoints] of Object.entries(grouped)) {
+        navHtml += `
+          <div class="space-y-1">
+            <div class="px-2 py-1 text-[11px] font-semibold tracking-wider uppercase text-slate-600 dark:text-slate-300 flex items-center justify-between">
+              <span>${tagName}</span>
+              <span class="text-[10px] text-slate-600 dark:text-slate-300 font-mono font-medium">${groupEndpoints.length}</span>
+            </div>
+            <div class="space-y-0.5">
+        `;
+
+        for (const ep of groupEndpoints) {
+          const isSelected = ep.id === state.selectedEndpointId;
+          const activeClass = isSelected
+            ? 'bg-blue-50/90 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 border-l-2 border-blue-600 dark:border-blue-400 font-medium'
+            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 border-l-2 border-transparent';
+
+          navHtml += `
+            <button 
+              data-endpoint-id="${ep.id}" 
+              class="endpoint-nav-item w-full text-left px-2.5 py-1.5 rounded-r-lg transition flex items-center gap-2 group ${activeClass}"
+            >
+              ${getMethodBadgeHtml(ep.method, 'sm')}
+              <div class="min-w-0 flex-1">
+                <div class="text-xs truncate font-medium">${ep.summary || ep.path}</div>
+                <div class="text-[10px] font-mono text-slate-600 dark:text-slate-400 truncate opacity-80 group-hover:opacity-100">${ep.path}</div>
+              </div>
+            </button>
+          `;
+        }
+
+        navHtml += `
+            </div>
+          </div>
+        `;
+      }
+
+      navEl.innerHTML = navHtml;
+      lucide.createIcons();
+    }
+
+    function renderDetails() {
+      const viewEl = document.getElementById('endpoint-details-view');
+      const endpoint = getSelectedEndpoint();
+      if (!viewEl || !endpoint || !state.parsedSpec) return;
+
+      const { baseUrl } = state.parsedSpec;
+
+      // Colorize path segments like {petId}
+      const formattedPath = endpoint.path.replace(/\{([^}]+)\}/g, '<span class="text-blue-600 dark:text-blue-400 font-semibold">{$1}</span>');
+
+      let html = `
+        <!-- Endpoint Header -->
+        <div class="border-b border-slate-200 dark:border-slate-800 pb-6 space-y-3 w-full min-w-0">
+          <div class="flex flex-wrap items-center gap-2 min-w-0">
+            ${getMethodBadgeHtml(endpoint.method, 'lg')}
+            <code class="text-xs sm:text-sm font-mono font-medium text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 select-all break-all max-w-full">
+              ${formattedPath}
+            </code>
+            <button id="btn-copy-path" class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition flex-shrink-0" title="Copy Path URL">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <h2 class="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white break-words">
+            ${endpoint.summary}
+          </h2>
+
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 break-words">
+            <span class="inline-flex items-center gap-1 font-mono text-slate-400 break-all">
+              <i data-lucide="server" class="w-3.5 h-3.5 flex-shrink-0"></i>
+              <span>${baseUrl}</span>
+            </span>
+            ${endpoint.operationId ? `<span>•</span><span class="font-mono text-slate-400 break-all">operationId: <span class="text-slate-600 dark:text-slate-300 font-medium">${endpoint.operationId}</span></span>` : ''}
+          </div>
+
+          <!-- Markdown Description -->
+          ${endpoint.description ? `<div class="mt-3 pt-2 text-slate-600 dark:text-slate-400 leading-relaxed text-xs sm:text-sm break-words">${renderMarkdown(endpoint.description)}</div>` : ''}
+        </div>
+
+        <!-- Parameters Section -->
+        <div class="space-y-4 w-full min-w-0">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-slate-400"></i>
+              <span>Parameters</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">${endpoint.parameters.length}</span>
+            </h3>
+          </div>
+
+          ${renderParametersTable(endpoint.parameters)}
+        </div>
+
+        <!-- Request Body Section -->
+        <div id="request-body-section" class="space-y-4 w-full min-w-0">
+          <!-- Rendered by renderRequestBodySection() -->
+        </div>
+
+        <!-- Responses Section -->
+        <div id="responses-section" class="space-y-4 w-full min-w-0">
+          <!-- Rendered by renderResponsesSection() -->
+        </div>
+      `;
+
+      viewEl.innerHTML = html;
+      renderRequestBodySection();
+      renderResponsesSection();
+      lucide.createIcons();
+    }
+
+    function renderParametersTable(parameters) {
+      if (!parameters || parameters.length === 0) {
+        return `
+          <div class="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center text-xs text-slate-500 dark:text-slate-400 w-full">
+            No parameters required for this endpoint.
+          </div>
+        `;
+      }
+
+      let rows = '';
+      for (const p of parameters) {
+        const requiredBadge = p.required
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60">Required</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">Optional</span>`;
+
+        let inBadgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+        if (p.in === 'path') inBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900';
+        if (p.in === 'header') inBadgeClass = 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-900';
+
+        rows += `
+          <tr class="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition text-xs">
+            <td class="py-3 px-3.5 align-top">
+              <div class="font-mono font-semibold text-slate-900 dark:text-slate-100 break-all">${p.name}</div>
+              <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono border ${inBadgeClass}">${p.in}</span>
+                ${requiredBadge}
+              </div>
+            </td>
+            <td class="py-3 px-3.5 align-top font-mono text-slate-600 dark:text-slate-300 break-all">
+              <div>${p.type}${p.format ? ` (${p.format})` : ''}</div>
+              ${p.enum ? `<div class="text-[11px] text-amber-600 dark:text-amber-400 mt-1 break-words">enum: [${p.enum.join(', ')}]</div>` : ''}
+              ${p.default !== undefined ? `<div class="text-[11px] text-slate-400 mt-0.5 break-all">default: ${JSON.stringify(p.default)}</div>` : ''}
+            </td>
+            <td class="py-3 px-3.5 align-top text-slate-600 dark:text-slate-400 leading-relaxed break-words">
+              <div>${p.description || '<span class="italic text-slate-400">No description provided</span>'}</div>
+              ${p.examples && p.examples.length > 1 ? `
+                <div class="mt-1.5 space-y-1">
+                  <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Examples (${p.examples.length}):</div>
+                  <div class="flex flex-wrap gap-1">
+                    ${p.examples.map(ex => `<span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 break-all" title="${escapeHtml(ex.summary || ex.key)}"><strong class="font-semibold text-slate-800 dark:text-slate-200">${escapeHtml(ex.key)}</strong>: ${escapeHtml(JSON.stringify(ex.value))}</span>`).join('')}
+                  </div>
+                </div>
+              ` : (p.example !== undefined ? `<div class="mt-1 font-mono text-[11px] text-slate-500 break-all">example: <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">${JSON.stringify(p.example)}</code></div>` : '')}
+            </td>
+          </tr>
+        `;
+      }
+
+      return `
+        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900 w-full max-w-full">
+          <div class="overflow-x-auto w-full max-w-full">
+            <table class="w-full text-left border-collapse min-w-[480px] sm:min-w-full">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th class="py-2.5 px-3.5 w-1/4">Parameter</th>
+                  <th class="py-2.5 px-3.5 w-1/4">Type</th>
+                  <th class="py-2.5 px-3.5 w-1/2">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRequestBodySection() {
+      const container = document.getElementById('request-body-section');
+      const endpoint = getSelectedEndpoint();
+      if (!container || !endpoint) return;
+
+      if (!endpoint.requestBody) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const rb = endpoint.requestBody;
+      const isExampleTab = state.activeRequestBodyTab === 'example';
+      const examples = rb.examples || [];
+      const hasMultipleExamples = examples.length > 1;
+
+      const activeEx = (examples.length > 0)
+        ? (examples.find(e => e.key === state.activeRequestBodyExampleKey) || examples[0])
+        : { key: 'default', name: 'Example', value: rb.exampleData || {} };
+
+      state.activeRequestBodyExampleKey = activeEx.key;
+      const exampleJson = activeEx.value !== undefined ? JSON.stringify(activeEx.value, null, 2) : '{}';
+
+      let contentHtml = '';
+      if (isExampleTab) {
+        let examplesToolbarHtml = '';
+        if (hasMultipleExamples) {
+          const optionsHtml = examples.map(ex => {
+            const isSel = ex.key === activeEx.key ? 'selected' : '';
+            const label = ex.summary ? `${ex.key} — ${ex.summary}` : ex.name || ex.key;
+            return `<option value="${escapeHtml(ex.key)}" ${isSel}>${escapeHtml(label)}</option>`;
+          }).join('');
+
+          const pillsHtml = examples.map(ex => {
+            const isSel = ex.key === activeEx.key;
+            const pillCls = isSel
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700';
+            return `
+              <button 
+                type="button" 
+                data-rb-example-key="${escapeHtml(ex.key)}" 
+                class="rb-example-pill px-2.5 py-1 rounded-md text-xs font-mono font-medium transition flex-shrink-0 ${pillCls}"
+                title="${escapeHtml(ex.summary || ex.key)}"
+              >
+                ${escapeHtml(ex.key)}
+              </button>
+            `;
+          }).join('');
+
+          examplesToolbarHtml = `
+            <div class="mb-3 space-y-2 w-full min-w-0">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/90 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full min-w-0">
+                <div class="flex items-center gap-2 min-w-0 flex-1 w-full">
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 flex-shrink-0">
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-500"></i>
+                    <span>Example:</span>
+                  </span>
+                  <select 
+                    id="select-rb-example" 
+                    class="text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer w-full min-w-0 truncate shadow-sm flex-1"
+                  >
+                    ${optionsHtml}
+                  </select>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 self-start sm:self-auto flex-shrink-0">
+                  ${examples.length} examples
+                </span>
+              </div>
+
+              <!-- Pill selector list for quick clicks: Only on sm+ screens, hidden on mobile -->
+              <div class="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                ${pillsHtml}
+              </div>
+
+              ${(activeEx.summary || activeEx.description) ? `
+                <div class="px-3 py-2 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/60 rounded-lg text-xs space-y-0.5 w-full min-w-0 break-words">
+                  ${activeEx.summary ? `<div class="font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 text-blue-500"></i><span>${escapeHtml(activeEx.summary)}</span></div>` : ''}
+                  ${activeEx.description ? `<div class="text-slate-600 dark:text-slate-400 pl-5 break-words">${renderMarkdown(activeEx.description)}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        } else if (activeEx.summary || activeEx.description) {
+          examplesToolbarHtml = `
+            <div class="mb-3 px-3 py-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs space-y-0.5 w-full min-w-0 break-words">
+              ${activeEx.summary ? `<div class="font-medium text-slate-800 dark:text-slate-200">${escapeHtml(activeEx.summary)}</div>` : ''}
+              ${activeEx.description ? `<div class="text-slate-500 dark:text-slate-400">${escapeHtml(activeEx.description)}</div>` : ''}
+            </div>
+          `;
+        }
+
+        contentHtml = `
+          ${examplesToolbarHtml}
+          <div class="relative w-full max-w-full">
+            <pre class="bg-slate-900 text-slate-100 rounded-xl overflow-x-auto shadow-inner p-3 sm:p-4 w-full max-w-full"><code id="rb-example-code" class="language-json block w-full whitespace-pre">${highlightCode(exampleJson, 'json')}</code></pre>
+            <button 
+              id="btn-copy-rb-example" 
+              class="absolute top-3 right-3 px-2 py-1 text-[11px] font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1 shadow-sm"
+              title="Copy JSON Payload"
+            >
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copy</span>
+            </button>
+          </div>
+        `;
+      } else {
+        // Schema table
+        const properties = flattenSchemaProperties(rb.schema);
+        if (properties.length === 0) {
+          contentHtml = `<div class="p-4 text-xs text-slate-500 w-full">No schema details available.</div>`;
+        } else {
+          let rows = '';
+          for (const p of properties) {
+            rows += `
+              <tr class="border-b border-slate-100 dark:border-slate-800/80 text-xs">
+                <td class="py-2.5 px-3 font-mono font-medium text-slate-800 dark:text-slate-200 break-all">
+                  ${p.name}
+                  ${p.required ? `<span class="text-rose-500 ml-0.5">*</span>` : ''}
+                </td>
+                <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400 break-all">${p.type}</td>
+                <td class="py-2.5 px-3 text-slate-600 dark:text-slate-400 break-words">
+                  <div>${p.description || '-'}</div>
+                  ${p.enum ? `<div class="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5 break-words">enum: [${p.enum}]</div>` : ''}
+                  ${p.example ? `<div class="text-[11px] font-mono text-slate-400 mt-0.5 break-all">example: ${p.example}</div>` : ''}
+                </td>
+              </tr>
+            `;
+          }
+          contentHtml = `
+            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden w-full max-w-full">
+              <div class="overflow-x-auto w-full max-w-full">
+                <table class="w-full text-left border-collapse text-xs min-w-[400px] sm:min-w-full">
+                  <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold uppercase text-slate-500">
+                      <th class="py-2 px-3">Field</th>
+                      <th class="py-2 px-3">Type</th>
+                      <th class="py-2 px-3">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 pt-6 w-full min-w-0">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <i data-lucide="file-code" class="w-4 h-4 text-slate-400"></i>
+            <span>Request Body</span>
+            ${rb.required ? `<span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900">Required</span>` : ''}
+          </h3>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 truncate max-w-[150px]">
+              ${rb.contentType}
+            </span>
+            <div class="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 text-xs">
+              <button 
+                id="btn-rb-tab-example" 
+                class="px-2.5 py-1 rounded-md transition font-medium ${isExampleTab ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'}"
+              >
+                Example Value
+              </button>
+              <button 
+                id="btn-rb-tab-schema" 
+                class="px-2.5 py-1 rounded-md transition font-medium ${!isExampleTab ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'}"
+              >
+                Schema
+              </button>
+            </div>
+          </div>
+        </div>
+
+        ${rb.description ? `<p class="text-xs text-slate-500 break-words">${rb.description}</p>` : ''}
+        ${contentHtml}
+      `;
+
+      lucide.createIcons();
+    }
+
+    function renderResponsesSection() {
+      const container = document.getElementById('responses-section');
+      const endpoint = getSelectedEndpoint();
+      if (!container || !endpoint) return;
+
+      const responses = endpoint.responses || [];
+      if (responses.length === 0) {
+        container.innerHTML = `
+          <div class="border-t border-slate-200 dark:border-slate-800 pt-6 w-full">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mb-2">Responses</h3>
+            <div class="text-xs text-slate-500">No response schemas specified.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Find active response object
+      const activeResp = responses.find(r => r.statusCode === state.activeResponseCode) || responses[0];
+      const activeCode = activeResp.statusCode;
+
+      // Status code tabs
+      let tabsHtml = '';
+      for (const r of responses) {
+        const isSel = r.statusCode === activeCode;
+        let pillClass = '';
+
+        if (r.statusCode.startsWith('2')) {
+          pillClass = isSel
+            ? 'bg-emerald-600 text-white shadow-sm'
+            : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100';
+        } else if (r.statusCode.startsWith('3')) {
+          pillClass = isSel
+            ? 'bg-blue-600 text-white shadow-sm'
+            : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100';
+        } else if (r.statusCode.startsWith('4')) {
+          pillClass = isSel
+            ? 'bg-amber-600 text-white shadow-sm'
+            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100';
+        } else {
+          pillClass = isSel
+            ? 'bg-rose-600 text-white shadow-sm'
+            : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100';
+        }
+
+        tabsHtml += `
+          <button 
+            data-response-code="${r.statusCode}" 
+            class="response-code-tab px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition flex items-center gap-1.5 ${pillClass}"
+          >
+            <span>${r.statusCode}</span>
+          </button>
+        `;
+      }
+
+      // Format response body sample
+      const respExamples = activeResp.examples || [];
+      const hasMultipleRespExamples = respExamples.length > 1;
+      const activeRespEx = (respExamples.length > 0)
+        ? (respExamples.find(e => e.key === state.activeResponseExampleKey) || respExamples[0])
+        : { key: 'default', name: 'Example', value: activeResp.exampleData };
+
+      state.activeResponseExampleKey = activeRespEx.key;
+
+      let sampleHtml = '';
+      if (activeRespEx.value !== undefined && activeRespEx.value !== null) {
+        const formatted = JSON.stringify(activeRespEx.value, null, 2);
+
+        let respExamplePickerHtml = '';
+        if (hasMultipleRespExamples) {
+          const respOptionsHtml = respExamples.map(ex => {
+            const isSel = ex.key === activeRespEx.key ? 'selected' : '';
+            const label = ex.summary ? `${ex.key} — ${ex.summary}` : ex.name || ex.key;
+            return `<option value="${escapeHtml(ex.key)}" ${isSel}>${escapeHtml(label)}</option>`;
+          }).join('');
+
+          const respPillsHtml = respExamples.map(ex => {
+            const isSel = ex.key === activeRespEx.key;
+            const pillCls = isSel
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700';
+            return `
+              <button 
+                type="button" 
+                data-resp-example-key="${escapeHtml(ex.key)}" 
+                class="resp-example-pill px-2.5 py-1 rounded-md text-xs font-mono font-medium transition flex-shrink-0 ${pillCls}"
+                title="${escapeHtml(ex.summary || ex.key)}"
+              >
+                ${escapeHtml(ex.key)}
+              </button>
+            `;
+          }).join('');
+
+          respExamplePickerHtml = `
+            <div class="mt-3 mb-2 space-y-2 w-full min-w-0">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/90 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full min-w-0">
+                <div class="flex items-center gap-2 min-w-0 flex-1 w-full">
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 flex-shrink-0">
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-500"></i>
+                    <span>Example:</span>
+                  </span>
+                  <select 
+                    id="select-resp-example" 
+                    class="text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer w-full min-w-0 truncate shadow-sm flex-1"
+                  >
+                    ${respOptionsHtml}
+                  </select>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 self-start sm:self-auto flex-shrink-0">
+                  ${respExamples.length} examples
+                </span>
+              </div>
+
+              <!-- Pill selector list for quick clicks: Only on sm+ screens, hidden on mobile -->
+              <div class="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+                ${respPillsHtml}
+              </div>
+
+              ${(activeRespEx.summary || activeRespEx.description) ? `
+                <div class="px-3 py-1.5 bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/60 rounded-lg text-xs w-full min-w-0 break-words">
+                  ${activeRespEx.summary ? `<div class="font-semibold text-blue-900 dark:text-blue-300">${escapeHtml(activeRespEx.summary)}</div>` : ''}
+                  ${activeRespEx.description ? `<div class="text-slate-600 dark:text-slate-400 mt-0.5 break-words">${renderMarkdown(activeRespEx.description)}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+
+        sampleHtml = `
+          ${respExamplePickerHtml}
+          <div class="relative w-full max-w-full ${hasMultipleRespExamples ? '' : 'mt-3'}">
+            <pre class="bg-slate-900 text-slate-100 rounded-xl overflow-x-auto shadow-inner p-3 sm:p-4 w-full max-w-full"><code id="resp-example-code" class="language-json block w-full whitespace-pre">${highlightCode(formatted, 'json')}</code></pre>
+            <button 
+              id="btn-copy-resp-example" 
+              class="absolute top-3 right-3 px-2 py-1 text-[11px] font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center gap-1 shadow-sm"
+              title="Copy Response JSON"
+            >
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copy</span>
+            </button>
+          </div>
+        `;
+      } else {
+        sampleHtml = `
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-500 italic mt-3 w-full">
+            No response payload sample defined for this status code.
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="border-t border-slate-200 dark:border-slate-800 pt-6 w-full min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4 text-slate-400"></i>
+              <span>Responses</span>
+            </h3>
+            <span class="text-xs font-mono text-slate-500 truncate max-w-[180px]">${activeResp.contentType}</span>
+          </div>
+
+          <!-- Status Code Selector Tabs -->
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-3">
+            ${tabsHtml}
+          </div>
+
+          <!-- Description -->
+          <div class="text-xs text-slate-700 dark:text-slate-300 font-medium break-words">
+            ${activeResp.description || '<span class="italic text-slate-400">No description provided</span>'}
+          </div>
+
+          <!-- Sample JSON Payload -->
+          ${sampleHtml}
+        </div>
+      `;
+
+      lucide.createIcons();
+    }
+
+    function renderCodeSnippet() {
+      const codeEl = document.getElementById('code-snippet-pre');
+      const endpoint = getSelectedEndpoint();
+      if (!codeEl || !endpoint || !state.parsedSpec) return;
+
+      const currentLang = state.selectedCodeLang || 'curl';
+      const code = generateCodeForLang(currentLang, endpoint, state.parsedSpec.baseUrl, state.liveParamValues, state.liveBodyText);
+      const hljsLang = currentLang === 'curl' ? 'bash' : (currentLang === 'golang' ? 'go' : currentLang);
+      codeEl.className = `language-${hljsLang} block w-full`;
+      codeEl.innerHTML = highlightCode(code, currentLang);
+      updateLanguageControls(currentLang);
+
+      // Update right column example switcher if present
+      const rightExBar = document.getElementById('code-snippet-example-bar');
+      if (rightExBar) {
+        if (endpoint.requestBody && endpoint.requestBody.examples && endpoint.requestBody.examples.length > 1) {
+          const opts = endpoint.requestBody.examples.map(ex => {
+            const isSel = ex.key === state.activeRequestBodyExampleKey ? 'selected' : '';
+            const lbl = ex.summary ? `${ex.key} (${ex.summary})` : ex.name || ex.key;
+            return `<option value="${escapeHtml(ex.key)}" ${isSel}>${escapeHtml(lbl)}</option>`;
+          }).join('');
+          rightExBar.innerHTML = `
+            <div class="flex items-center justify-between gap-2 px-3 py-1.5 mb-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+              <span class="text-slate-400 text-[11px] font-medium flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-400"></i>
+                <span>Payload Example:</span>
+              </span>
+              <select id="select-right-example" class="text-xs bg-slate-800 text-slate-200 border border-slate-700 rounded-md px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono max-w-[200px] sm:max-w-xs truncate cursor-pointer">
+                ${opts}
+              </select>
+            </div>
+          `;
+          lucide.createIcons();
+        } else {
+          rightExBar.innerHTML = '';
+        }
+      }
+    }
+
+    function renderInteractiveClient() {
+      const inputsContainer = document.getElementById('interactive-inputs-container');
+      const responseContainer = document.getElementById('interactive-response-container');
+      const endpoint = getSelectedEndpoint();
+      if (!inputsContainer || !endpoint) return;
+
+      // Populate interactive inputs
+      let html = '';
+      if (endpoint.parameters.length > 0) {
+        html += `<div class="space-y-2">`;
+        for (const p of endpoint.parameters) {
+          const val = state.liveParamValues[p.name] !== undefined ? state.liveParamValues[p.name] : '';
+          html += `
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <label class="font-mono text-slate-300 font-medium">${p.name}</label>
+                <span class="text-slate-500 text-[10px] font-mono">${p.in}</span>
+              </div>
+              <input 
+                type="text" 
+                data-param-name="${p.name}" 
+                value="${String(val).replace(/"/g, '&quot;')}" 
+                placeholder="${p.example !== undefined ? p.example : p.type}" 
+                class="live-param-input w-full px-2.5 py-1 text-xs bg-slate-950 border border-slate-700 rounded-md text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 font-mono"
+              >
+            </div>
+          `;
+        }
+        html += `</div>`;
+      }
+
+      if (endpoint.requestBody) {
+        let examplePickerHtml = '';
+        if (endpoint.requestBody.examples && endpoint.requestBody.examples.length > 1) {
+          const opts = endpoint.requestBody.examples.map(ex => {
+            const isSel = ex.key === state.activeRequestBodyExampleKey ? 'selected' : '';
+            const lbl = ex.summary ? `${ex.key} (${ex.summary})` : ex.name || ex.key;
+            return `<option value="${escapeHtml(ex.key)}" ${isSel}>${escapeHtml(lbl)}</option>`;
+          }).join('');
+          examplePickerHtml = `
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-500 text-[10px]">Example:</span>
+              <select id="select-try-example" class="text-[11px] bg-slate-800 text-slate-200 border border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono cursor-pointer max-w-[150px] truncate">
+                ${opts}
+              </select>
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="space-y-1 pt-1">
+            <div class="flex items-center justify-between text-[11px]">
+              <label class="font-medium text-slate-300">Request Body (JSON)</label>
+              ${examplePickerHtml || `<span class="text-slate-500 text-[10px] font-mono">application/json</span>`}
+            </div>
+            <textarea 
+              id="interactive-body-input" 
+              rows="6" 
+              class="w-full px-2.5 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-md text-slate-100 font-mono focus:outline-none focus:border-blue-500 resize-y"
+            >${state.liveBodyText || ''}</textarea>
+          </div>
+        `;
+      }
+
+      if (!html) {
+        html = `<div class="text-xs text-slate-400 italic">No parameters or body needed for this request.</div>`;
+      }
+
+      inputsContainer.innerHTML = html;
+
+      // Update response output if active
+      const resState = state.tryRequestState;
+      if (resState.loading) {
+        responseContainer.classList.remove('hidden');
+        document.getElementById('try-response-status').textContent = 'Loading...';
+        document.getElementById('try-response-status').className = 'px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/60 text-blue-300';
+        document.getElementById('try-response-time').textContent = '';
+        document.getElementById('try-response-code').innerHTML = highlightCode('// Executing HTTP request...', 'javascript');
+      } else if (resState.statusCode !== null || resState.error !== null) {
+        responseContainer.classList.remove('hidden');
+        const statusEl = document.getElementById('try-response-status');
+        const timeEl = document.getElementById('try-response-time');
+        const codeEl = document.getElementById('try-response-code');
+
+        if (resState.error) {
+          statusEl.textContent = 'CORS / Network Error';
+          statusEl.className = 'px-1.5 py-0.5 rounded font-mono text-[11px] bg-rose-900/60 text-rose-300 border border-rose-800';
+          timeEl.textContent = `${resState.timeMs}ms`;
+          const errText = `// Direct browser fetch failed due to CORS or network security:\n${resState.error}\n\n// Note: This API endpoint does not allow direct cross-origin browser requests.\n// You can run the generated Node.js / JavaScript snippet safely in backend services or curl.`;
+          codeEl.innerHTML = highlightCode(errText, 'javascript');
+        } else {
+          statusEl.textContent = `${resState.statusCode} ${resState.statusText}`;
+          const isSuccess = resState.statusCode >= 200 && resState.statusCode < 300;
+          statusEl.className = `px-1.5 py-0.5 rounded font-mono text-[11px] border ${isSuccess ? 'bg-emerald-900/60 text-emerald-300 border-emerald-800' : 'bg-amber-900/60 text-amber-300 border-amber-800'}`;
+          timeEl.textContent = `${resState.timeMs}ms`;
+          const bodyStr = typeof resState.body === 'object' ? JSON.stringify(resState.body, null, 2) : String(resState.body);
+          codeEl.innerHTML = highlightCode(bodyStr, 'json');
+        }
+      } else {
+        responseContainer.classList.add('hidden');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 9. INTERACTIVE CLIENT FETCH INVOCATION
+     * ============================================================================
+     */
+    async function executeLiveRequest() {
+      const endpoint = getSelectedEndpoint();
+      if (!endpoint || !state.parsedSpec) return;
+
+      state.tryRequestState = {
+        loading: true,
+        statusCode: null,
+        statusText: null,
+        timeMs: null,
+        body: null,
+        error: null
+      };
+      renderInteractiveClient();
+
+      // Build live URL
+      let pathExpr = endpoint.path;
+      const pathParams = endpoint.parameters.filter(p => p.in === 'path');
+      for (const p of pathParams) {
+        const val = state.liveParamValues[p.name] !== undefined ? state.liveParamValues[p.name] : '42';
+        pathExpr = pathExpr.replace(`{${p.name}}`, encodeURIComponent(val));
+      }
+
+      const cleanBase = (state.parsedSpec.baseUrl || 'https://api.example.com').replace(/\/$/, '');
+      const url = new URL(`${cleanBase}${pathExpr}`);
+
+      // Query params
+      const queryParams = endpoint.parameters.filter(p => p.in === 'query');
+      for (const q of queryParams) {
+        if (state.liveParamValues[q.name] !== undefined) {
+          url.searchParams.append(q.name, state.liveParamValues[q.name]);
+        }
+      }
+
+      // Headers
+      const headers = { 'Accept': 'application/json' };
+      if (endpoint.requestBody) {
+        headers['Content-Type'] = endpoint.requestBody.contentType || 'application/json';
+      }
+      const headerParams = endpoint.parameters.filter(p => p.in === 'header');
+      for (const h of headerParams) {
+        if (state.liveParamValues[h.name]) {
+          headers[h.name] = state.liveParamValues[h.name];
+        }
+      }
+
+      const startTime = performance.now();
+
+      try {
+        const options = {
+          method: endpoint.method,
+          headers
+        };
+
+        if (endpoint.requestBody && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(endpoint.method)) {
+          options.body = state.liveBodyText || '{}';
+        }
+
+        const res = await fetch(url.toString(), options);
+        const elapsed = Math.round(performance.now() - startTime);
+
+        let bodyData = null;
+        const text = await res.text();
+        try {
+          bodyData = JSON.parse(text);
+        } catch (e) {
+          bodyData = text;
+        }
+
+        state.tryRequestState = {
+          loading: false,
+          statusCode: res.status,
+          statusText: res.statusText,
+          timeMs: elapsed,
+          body: bodyData,
+          error: null
+        };
+      } catch (err) {
+        const elapsed = Math.round(performance.now() - startTime);
+        state.tryRequestState = {
+          loading: false,
+          statusCode: null,
+          statusText: null,
+          timeMs: elapsed,
+          body: null,
+          error: err.message
+        };
+      }
+
+      renderInteractiveClient();
+    }
+
+    /**
+     * ============================================================================
+     * 10. NOTIFICATIONS, TOASTS & ALERTS
+     * ============================================================================
+     */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-medium transform transition-all duration-300 translate-y-2 opacity-0';
+
+      if (type === 'success') {
+        toast.className += ' bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-800 dark:border-slate-200';
+      } else if (type === 'error') {
+        toast.className += ' bg-rose-600 text-white border-rose-700';
+      } else {
+        toast.className += ' bg-slate-800 text-white border-slate-700';
+      }
+
+      toast.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-triangle' : 'info')}" class="w-4 h-4"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Animate out after 3.5s
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function showAlert(message) {
+      const banner = document.getElementById('global-alert');
+      const text = document.getElementById('global-alert-text');
+      if (banner && text) {
+        text.textContent = message;
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function clearAlert() {
+      const banner = document.getElementById('global-alert');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    /**
+     * ============================================================================
+     * 11. EVENT DELEGATION & EVENT LISTENERS
+     * ============================================================================
+     */
+    /**
+     * Renders a clean empty/welcome state when no embedded specification is loaded
+     */
+    function renderEmptyState() {
+      const detailsContainer = document.getElementById('endpoint-details-view');
+      const sidebarNav = document.getElementById('nav-endpoints-tree');
+      const codeSnippet = document.getElementById('code-snippet-pre');
+      const counter = document.getElementById('sidebar-endpoint-counter');
+
+      if (counter) counter.textContent = '0 endpoints';
+      if (sidebarNav) {
+        sidebarNav.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400 dark:text-slate-500">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+            <p>No endpoints loaded</p>
+          </div>
+        `;
+      }
+      if (detailsContainer) {
+        detailsContainer.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto">
+            <div class="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-5 shadow-sm">
+              <i data-lucide="file-code" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No Specification Loaded</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+              This viewer is ready for your API. Load a specification using the toolbar above, or inject your OpenAPI JSON using <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-xs">build.sh</code>.
+            </p>
+            <!-- __COMPONENT_UPLOAD_START__ -->
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <label for="spec-file-input" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm cursor-pointer">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span>Upload JSON Spec</span>
+              </label>
+            </div>
+            <!-- __COMPONENT_UPLOAD_END__ -->
+          </div>
+        `;
+        lucide.createIcons();
+      }
+      if (codeSnippet) {
+        codeSnippet.textContent = '// Upload or fetch an OpenAPI specification to view code snippets\n';
+      }
+    }
+
+    function initEventListeners() {
+      // 1. Endpoint Navigation Clicks (Event Delegation on nav-endpoints-tree)
+      const navTree = document.getElementById('nav-endpoints-tree');
+      if (navTree) {
+        navTree.addEventListener('click', (e) => {
+          const item = e.target.closest('.endpoint-nav-item');
+          if (item) {
+            const epId = item.getAttribute('data-endpoint-id');
+            if (epId) selectEndpoint(epId);
+          }
+          if (e.target.id === 'btn-reset-filter') {
+            const input = document.getElementById('input-filter');
+            if (input) input.value = '';
+            setFilterText('');
+          }
+        });
+      }
+
+      // 2. Tag Filter Pills (Event Delegation)
+      const tagPills = document.getElementById('tag-filter-pills');
+      if (tagPills) {
+        tagPills.addEventListener('click', (e) => {
+          const btn = e.target.closest('.tag-filter-btn');
+          if (btn) {
+            const tag = btn.getAttribute('data-tag');
+            if (tag) setSelectedTag(tag);
+          }
+        });
+      }
+
+      // 3. Search Filter Input
+      const filterInput = document.getElementById('input-filter');
+      if (filterInput) {
+        filterInput.addEventListener('input', (e) => setFilterText(e.target.value));
+      }
+
+      const clearSearchBtn = document.getElementById('btn-clear-search');
+      if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+          if (filterInput) filterInput.value = '';
+          setFilterText('');
+          filterInput.focus();
+        });
+      }
+
+      // __COMPONENT_LOAD_URL_START__
+      // 4. Remote Spec Fetch Form
+      const fetchForm = document.getElementById('form-fetch-remote');
+      if (fetchForm) {
+        fetchForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const urlInput = document.getElementById('input-spec-url');
+          const url = (urlInput.value || '').trim();
+          if (!url) return;
+
+          showToast('Fetching remote OpenAPI JSON...', 'info');
+          const fetchBtn = document.getElementById('btn-fetch-spec');
+          const originalText = fetchBtn.innerHTML;
+          fetchBtn.innerHTML = `<span>Loading...</span>`;
+          fetchBtn.disabled = true;
+
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            const data = await res.json();
+            setSpec(data);
+          } catch (err) {
+            console.error(err);
+            showAlert(`Failed to fetch from ${url}. Reason: ${err.message}. If this is a cross-origin server, make sure CORS is enabled.`);
+            showToast('Fetch failed: CORS or network error', 'error');
+          } finally {
+            fetchBtn.innerHTML = originalText;
+            fetchBtn.disabled = false;
+          }
+        });
+      }
+      // __COMPONENT_LOAD_URL_END__
+
+      // __COMPONENT_UPLOAD_START__
+      // 5. Local File Picker
+      const fileInput = document.getElementById('spec-file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              setSpec(parsed);
+              fileInput.value = ''; // Reset file input
+            } catch (jsonErr) {
+              showAlert(`Invalid JSON File: ${jsonErr.message}`);
+              showToast('Invalid JSON file format', 'error');
+            }
+          };
+          reader.onerror = () => {
+            showAlert('Failed to read file from disk');
+            showToast('File read error', 'error');
+          };
+          reader.readAsText(file);
+        });
+      }
+      // __COMPONENT_UPLOAD_END__
+
+
+      // 6. Reset Demo Button
+      const resetBtn = document.getElementById('btn-reset-demo');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          if (typeof EMBEDDED_OPENAPI_SPEC !== 'undefined' && EMBEDDED_OPENAPI_SPEC) {
+            setSpec(EMBEDDED_OPENAPI_SPEC);
+            showToast('Specification reloaded', 'success');
+          } else {
+            showToast('No embedded specification available', 'info');
+          }
+        });
+      }
+
+      // 8. Dark Mode Toggle
+      const themeToggleBtn = document.getElementById('btn-theme-toggle');
+      if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', toggleDarkMode);
+      }
+
+      // 9. Mobile Menu Drawer Toggles
+      const openDrawerBtn = document.getElementById('btn-toggle-mobile-menu');
+      const closeDrawerBtn = document.getElementById('btn-close-mobile-menu');
+      const backdrop = document.getElementById('mobile-drawer-backdrop');
+
+      if (openDrawerBtn) openDrawerBtn.addEventListener('click', () => toggleMobileDrawer(true));
+      if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => toggleMobileDrawer(false));
+      if (backdrop) backdrop.addEventListener('click', () => toggleMobileDrawer(false));
+
+      // 10. Mobile Segmented Tabs
+      const mobileTabDocs = document.getElementById('mobile-tab-docs');
+      const mobileTabCode = document.getElementById('mobile-tab-code');
+      if (mobileTabDocs) mobileTabDocs.addEventListener('click', () => setMobileTab('docs'));
+      if (mobileTabCode) mobileTabCode.addEventListener('click', () => setMobileTab('code'));
+
+      // 11. Language Switcher Controls (Mobile Select & Desktop Pills)
+      const mobileLangSelect = document.getElementById('select-code-lang-mobile');
+      if (mobileLangSelect) {
+        mobileLangSelect.addEventListener('change', (e) => {
+          setSelectedCodeLang(e.target.value);
+        });
+      }
+
+      const desktopLangPills = document.getElementById('desktop-lang-pills');
+      if (desktopLangPills) {
+        desktopLangPills.addEventListener('click', (e) => {
+          const btn = e.target.closest('.lang-tab-btn');
+          if (btn) {
+            const lang = btn.getAttribute('data-lang');
+            if (lang) setSelectedCodeLang(lang);
+          }
+        });
+      }
+
+      // 12. Interactive Test Toggle Button
+      const toggleTryBtn = document.getElementById('btn-toggle-interactive-test');
+      if (toggleTryBtn) {
+        toggleTryBtn.addEventListener('click', toggleInteractiveTest);
+      }
+
+      // 13. Copy Code Snippet Button
+      const copyCodeBtn = document.getElementById('btn-copy-code');
+      if (copyCodeBtn) {
+        copyCodeBtn.addEventListener('click', async () => {
+          const endpoint = getSelectedEndpoint();
+          if (!endpoint || !state.parsedSpec) return;
+
+          const lang = state.selectedCodeLang || 'curl';
+          const code = generateCodeForLang(lang, endpoint, state.parsedSpec.baseUrl, state.liveParamValues, state.liveBodyText);
+          try {
+            await navigator.clipboard.writeText(code);
+            const btnText = document.getElementById('copy-btn-text');
+            if (btnText) btnText.textContent = 'Copied!';
+            copyCodeBtn.classList.add('bg-emerald-700', 'text-white');
+            const langLabel = lang === 'curl' ? 'cURL' : (lang === 'javascript' ? 'JavaScript' : (lang === 'golang' ? 'Golang' : 'PHP'));
+            showToast(`${langLabel} code copied to clipboard`, 'success');
+            setTimeout(() => {
+              if (btnText) btnText.textContent = 'Copy';
+              copyCodeBtn.classList.remove('bg-emerald-700', 'text-white');
+            }, 2000);
+          } catch (err) {
+            showToast('Failed to copy', 'error');
+          }
+        });
+      }
+
+      // 14. Interactive Client Request Button
+      const runRequestBtn = document.getElementById('btn-execute-request');
+      if (runRequestBtn) {
+        runRequestBtn.addEventListener('click', executeLiveRequest);
+      }
+
+      // 15. Right Column Container (Example Switchers & Input Changes)
+      const codeContainer = document.getElementById('code-container');
+      if (codeContainer) {
+        codeContainer.addEventListener('change', (e) => {
+          if (e.target.id === 'select-right-example' || e.target.id === 'select-try-example') {
+            setRequestBodyExample(e.target.value);
+          }
+        });
+      }
+
+      // 16. Interactive Input Changes (Event Delegation)
+      const interactiveInputsContainer = document.getElementById('interactive-inputs-container');
+      if (interactiveInputsContainer) {
+        interactiveInputsContainer.addEventListener('input', (e) => {
+          if (e.target.classList.contains('live-param-input')) {
+            const paramName = e.target.getAttribute('data-param-name');
+            state.liveParamValues[paramName] = e.target.value;
+            renderCodeSnippet();
+          } else if (e.target.id === 'interactive-body-input') {
+            state.liveBodyText = e.target.value;
+            renderCodeSnippet();
+          }
+        });
+      }
+
+      // 17. Details View Changes & Clicks (Response tabs, Request Body tabs, Example Switchers, Copy buttons)
+      const detailsView = document.getElementById('endpoint-details-view');
+      if (detailsView) {
+        // Change events for example select dropdowns
+        detailsView.addEventListener('change', (e) => {
+          if (e.target.id === 'select-rb-example') {
+            setRequestBodyExample(e.target.value);
+          } else if (e.target.id === 'select-resp-example') {
+            setResponseExample(e.target.value);
+          }
+        });
+
+        detailsView.addEventListener('click', async (e) => {
+          // Request Body Example Pill Click
+          const rbPill = e.target.closest('.rb-example-pill');
+          if (rbPill) {
+            const key = rbPill.getAttribute('data-rb-example-key');
+            if (key) setRequestBodyExample(key);
+            return;
+          }
+
+          // Response Example Pill Click
+          const respPill = e.target.closest('.resp-example-pill');
+          if (respPill) {
+            const key = respPill.getAttribute('data-resp-example-key');
+            if (key) setResponseExample(key);
+            return;
+          }
+
+          // Response status code tab
+          const respTab = e.target.closest('.response-code-tab');
+          if (respTab) {
+            const code = respTab.getAttribute('data-response-code');
+            if (code) setActiveResponseCode(code);
+            return;
+          }
+
+          // Request Body tabs
+          if (e.target.closest('#btn-rb-tab-example')) {
+            setRequestBodyTab('example');
+            return;
+          }
+          if (e.target.closest('#btn-rb-tab-schema')) {
+            setRequestBodyTab('schema');
+            return;
+          }
+
+          // Copy Path Button
+          if (e.target.closest('#btn-copy-path')) {
+            const ep = getSelectedEndpoint();
+            if (ep) {
+              await navigator.clipboard.writeText(ep.path);
+              showToast('Path copied to clipboard', 'success');
+            }
+            return;
+          }
+
+          // Copy Request Body Example
+          if (e.target.closest('#btn-copy-rb-example')) {
+            const ep = getSelectedEndpoint();
+            if (ep && ep.requestBody) {
+              const examples = ep.requestBody.examples || [];
+              const activeEx = examples.find(x => x.key === state.activeRequestBodyExampleKey) || examples[0];
+              const valToCopy = activeEx ? activeEx.value : ep.requestBody.exampleData;
+              if (valToCopy !== undefined) {
+                await navigator.clipboard.writeText(JSON.stringify(valToCopy, null, 2));
+                showToast('Payload copied to clipboard', 'success');
+              }
+            }
+            return;
+          }
+
+          // Copy Response Example
+          if (e.target.closest('#btn-copy-resp-example')) {
+            const ep = getSelectedEndpoint();
+            const activeResp = ep?.responses.find(r => r.statusCode === state.activeResponseCode);
+            if (activeResp) {
+              const examples = activeResp.examples || [];
+              const activeEx = examples.find(x => x.key === state.activeResponseExampleKey) || examples[0];
+              const valToCopy = activeEx ? activeEx.value : activeResp.exampleData;
+              if (valToCopy !== undefined) {
+                await navigator.clipboard.writeText(JSON.stringify(valToCopy, null, 2));
+                showToast('Response JSON copied to clipboard', 'success');
+              }
+            }
+            return;
+          }
+        });
+      }
+
+      // 16. Alert Dismiss Button
+      const dismissAlertBtn = document.getElementById('btn-dismiss-alert');
+      if (dismissAlertBtn) {
+        dismissAlertBtn.addEventListener('click', clearAlert);
+      }
+
+      // 17. Keyboard Shortcuts (e.g. '/' or 'Cmd+K' to focus search)
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          const filterInput = document.getElementById('input-filter');
+          if (filterInput) filterInput.focus();
+        }
+      });
+    }
+
+    /**
+     * ============================================================================
+     * 12. APPLICATION INITIALIZATION
+     * ============================================================================
+     */
+    function initApp() {
+      // Dark Mode detection
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        state.darkMode = true;
+        document.documentElement.classList.add('dark');
+      } else {
+        state.darkMode = false;
+        document.documentElement.classList.remove('dark');
+      }
+
+      // Setup DOM events
+      initEventListeners();
+
+      // Load Embedded Spec if present, else show clean welcome / upload state
+      if (typeof EMBEDDED_OPENAPI_SPEC !== 'undefined' && EMBEDDED_OPENAPI_SPEC) {
+        setSpec(EMBEDDED_OPENAPI_SPEC);
+      } else {
+        renderEmptyState();
+      }
+
+      // Initialize icons
+      lucide.createIcons();
+    }
+
+    // Launch application on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
