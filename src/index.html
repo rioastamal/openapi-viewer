@@ -163,7 +163,6 @@
           <div class="min-w-0 flex items-baseline gap-1.5 sm:gap-2">
             <h1 id="header-api-title" class="font-bold text-slate-900 dark:text-white text-sm sm:text-base lg:text-lg truncate tracking-tight">API Spec Viewer</h1>
             <span id="header-api-version" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">v1.0.0</span>
-            <span id="header-spec-type" class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">OAS 3.0</span>
           </div>
         </div>
       </div>
@@ -201,6 +200,13 @@
         </label>
         <input type="file" id="spec-file-input" accept=".json" class="hidden">
         <!-- __COMPONENT_UPLOAD_END__ -->
+
+        <!-- Authorization Token Button -->
+        <button id="btn-open-auth-modal" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition shadow-sm flex-shrink-0" title="Set Authorization Header">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+          <span class="hidden sm:inline" id="btn-auth-label">Authorize</span>
+          <span id="auth-status-dot" class="hidden w-2 h-2 rounded-full bg-emerald-500"></span>
+        </button>
 
         <!-- Reset Demo Button -->
         <button id="btn-reset-demo" class="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0" title="Reset Demo Spec">
@@ -417,6 +423,9 @@
     // __EMBEDDED_SPEC_START__
     const EMBEDDED_OPENAPI_SPEC = null;
     // __EMBEDDED_SPEC_END__
+    // __EMBEDDED_SERVER_URL_START__
+    const EMBEDDED_SERVER_URL = null;
+    // __EMBEDDED_SERVER_URL_END__
     /**
      * ============================================================================
      * 2. SPEC RESOLUTION & DEREFERENCING HELPERS
@@ -742,7 +751,9 @@
 
       // Base URL resolution
       let baseUrl = "https://api.example.com";
-      if (isOpenApi3) {
+      if (typeof EMBEDDED_SERVER_URL !== "undefined" && EMBEDDED_SERVER_URL) {
+        baseUrl = String(EMBEDDED_SERVER_URL).trim();
+      } else if (isOpenApi3) {
         if (raw.servers && raw.servers.length > 0 && raw.servers[0].url) {
           baseUrl = raw.servers[0].url;
         }
@@ -967,12 +978,30 @@
         }
       }
 
+      // Extract custom pages (e.g. x-pages or info["x-pages"])
+      const rawPages = raw['x-pages'] || (raw.info && raw.info['x-pages']) || [];
+      const pages = [];
+      if (Array.isArray(rawPages)) {
+        for (let i = 0; i < rawPages.length; i++) {
+          const p = rawPages[i];
+          if (!p || typeof p !== 'object') continue;
+          const pageId = String(p.id || p.slug || `page-${i}`).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+          pages.push({
+            id: pageId,
+            title: p.title || p.name || `Page ${i + 1}`,
+            icon: p.icon || 'book-open',
+            content: typeof p.content === 'string' ? p.content : (p.description || '')
+          });
+        }
+      }
+
       return {
         specType: isOpenApi3 ? 'OpenAPI 3.x' : 'Swagger 2.0',
         info,
         baseUrl,
         endpoints,
-        tags: Array.from(tagsMap.values())
+        tags: Array.from(tagsMap.values()),
+        pages
       };
     }
 
@@ -1040,7 +1069,10 @@
       if (endpoint.requestBody) {
         lines.push(`    'Content-Type': '${endpoint.requestBody.contentType || 'application/json'}',`);
       }
+      const tokenVal = state.apiToken || 'YOUR_API_TOKEN';
+      lines.push(`    'Authorization': 'Bearer ${tokenVal}',`);
       for (const h of headerParams) {
+        if (h.name.toLowerCase() === 'authorization') continue;
         const customVal = liveParamValues[h.name];
         const val = customVal !== undefined ? customVal : (h.example || h.default || 'demo_token');
         lines.push(`    '${h.name}': '${val}',`);
@@ -1130,8 +1162,12 @@
         lines.push(`  -H "Content-Type: ${endpoint.requestBody.contentType || 'application/json'}" \\`);
       }
 
+      const tokenVal = state.apiToken || 'YOUR_API_TOKEN';
+      lines.push(`  -H "Authorization: Bearer ${tokenVal}" \\`);
+
       for (let i = 0; i < headerParams.length; i++) {
         const h = headerParams[i];
+        if (h.name.toLowerCase() === 'authorization') continue;
         const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
         lines.push(`  -H "${h.name}: ${val}" \\`);
       }
@@ -1214,7 +1250,10 @@
       if (endpoint.requestBody) {
         lines.push(`    "Content-Type: ${endpoint.requestBody.contentType || 'application/json'}",`);
       }
+      const tokenVal = state.apiToken || 'YOUR_API_TOKEN';
+      lines.push(`    "Authorization: Bearer ${tokenVal}",`);
       for (const h of headerParams) {
+        if (h.name.toLowerCase() === 'authorization') continue;
         const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
         lines.push(`    "${h.name}: ${val}",`);
       }
@@ -1328,7 +1367,10 @@
       if (endpoint.requestBody) {
         lines.push(`\treq.Header.Set("Content-Type", "${endpoint.requestBody.contentType || 'application/json'}")`);
       }
+      const tokenVal = state.apiToken || 'YOUR_API_TOKEN';
+      lines.push(`\treq.Header.Set("Authorization", "Bearer ${tokenVal}")`);
       for (const h of headerParams) {
+        if (h.name.toLowerCase() === 'authorization') continue;
         const val = liveParamValues[h.name] !== undefined ? liveParamValues[h.name] : (h.example || h.default || 'demo_token');
         lines.push(`\treq.Header.Set("${h.name}", "${val}")`);
       }
@@ -1380,8 +1422,39 @@
      */
     function renderMarkdown(md) {
       if (!md) return '';
-      // Escape HTML entities to protect against XSS
-      let out = md
+
+      // 1. Extract and preserve fenced code blocks before escaping
+      const codeBlocks = [];
+      let out = md.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```/g, (match, lang, code) => {
+        const id = `___FENCED_CODE_${codeBlocks.length}___`;
+        codeBlocks.push({ lang: lang || 'text', code: code.replace(/\r?\n$/, '') });
+        return id;
+      });
+
+      // 2. Extract and preserve multi-line GFM Alert Boxes & Blockquotes before escaping HTML
+      const alertBlocks = [];
+      out = out.replace(/(?:^[ \t]*>[ \t]?.*(?:\r?\n|$))+/gm, (block) => {
+        const rawLines = block.split(/\r?\n/).filter(l => l.trim().length > 0);
+        const contentLines = rawLines.map(l => l.replace(/^[ \t]*>[ \t]?/, ''));
+        const firstLine = contentLines[0] || '';
+
+        const alertMatch = firstLine.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|INFO)\](?:\s+(.*))?$/i);
+        const id = `___ALERT_BLOCK_${alertBlocks.length}___`;
+
+        if (alertMatch) {
+          const type = alertMatch[1].toUpperCase();
+          const inlineTitle = alertMatch[2] || '';
+          const bodyLines = contentLines.slice(1);
+          if (inlineTitle) bodyLines.unshift(inlineTitle);
+          alertBlocks.push({ isAlert: true, type, body: bodyLines.join('\n').trim() });
+        } else {
+          alertBlocks.push({ isAlert: false, body: contentLines.join('\n').trim() });
+        }
+        return `\n\n${id}\n\n`;
+      });
+
+      // 3. Escape HTML entities to protect against XSS
+      out = out
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -1389,28 +1462,137 @@
         .replace(/'/g, '&#39;');
 
       // Headings
-      out = out.replace(/^### (.*$)/gim, '<h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-3 mb-1">$1</h4>');
-      out = out.replace(/^## (.*$)/gim, '<h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 mt-4 mb-1">$1</h3>');
-      out = out.replace(/^# (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-4 mb-2">$1</h2>');
+      out = out.replace(/^### (.*$)/gim, '<h4 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-6 mb-2">$1</h4>');
+      out = out.replace(/^## (.*$)/gim, '<h3 class="text-xl font-bold text-slate-900 dark:text-slate-100 mt-8 mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">$1</h3>');
+      out = out.replace(/^# (.*$)/gim, '<h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 mt-2 mb-4 tracking-tight">$1</h2>');
+
+      // Inline formatting helper for text inside alerts and paragraphs
+      function formatInline(str) {
+        let s = str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        s = s.replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100"><em>$1</em></strong>');
+        s = s.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>');
+        s = s.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+        s = s.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 text-xs font-mono font-medium">$1</code>');
+        s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>');
+        return s.replace(/\r?\n/g, '<br>');
+      }
 
       // Bold & Italic
-      out = out.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      out = out.replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100"><em>$1</em></strong>');
       out = out.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>');
       out = out.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
 
       // Monospace code
-      out = out.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-medium">$1</code>');
+      out = out.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 text-xs font-mono font-medium">$1</code>');
 
       // Hyperlinks
       out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>');
 
       // Bullet lists
-      out = out.replace(/^\s*-\s+(.*$)/gim, '<li class="ml-4 list-disc text-slate-600 dark:text-slate-400">$1</li>');
+      out = out.replace(/^\s*-\s+(.*$)/gim, '<li class="ml-4 list-disc text-slate-600 dark:text-slate-300 my-1">$1</li>');
+
+      // Numbered lists
+      out = out.replace(/^\s*([0-9]+)\.\s+(.*$)/gim, '<li class="ml-5 list-decimal text-slate-600 dark:text-slate-300 my-1">$2</li>');
 
       // Paragraphs
-      out = out.replace(/\n\n+/g, '</p><p class="mt-2 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">');
+      out = out.replace(/\n\n+/g, '</p><p class="mt-3 text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">');
 
-      return `<div class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed"><p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${out}</p></div>`;
+      // 4. Restore Alert Blocks & Blockquotes
+      const alertConfigs = {
+        NOTE: {
+          title: 'Note',
+          icon: 'info',
+          classes: 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 border-l-4',
+          iconClass: 'text-blue-600 dark:text-blue-400'
+        },
+        INFO: {
+          title: 'Info',
+          icon: 'info',
+          classes: 'border-blue-500 bg-blue-50/80 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 border-l-4',
+          iconClass: 'text-blue-600 dark:text-blue-400'
+        },
+        TIP: {
+          title: 'Tip',
+          icon: 'lightbulb',
+          classes: 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border-l-4',
+          iconClass: 'text-emerald-600 dark:text-emerald-400'
+        },
+        IMPORTANT: {
+          title: 'Important',
+          icon: 'alert-circle',
+          classes: 'border-violet-500 bg-violet-50/80 dark:bg-violet-950/40 text-violet-900 dark:text-violet-200 border-l-4',
+          iconClass: 'text-violet-600 dark:text-violet-400'
+        },
+        WARNING: {
+          title: 'Warning',
+          icon: 'alert-triangle',
+          classes: 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-l-4',
+          iconClass: 'text-amber-600 dark:text-amber-400'
+        },
+        CAUTION: {
+          title: 'Caution',
+          icon: 'shield-alert',
+          classes: 'border-rose-500 bg-rose-50/80 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 border-l-4',
+          iconClass: 'text-rose-600 dark:text-rose-400'
+        }
+      };
+
+      for (let i = 0; i < alertBlocks.length; i++) {
+        const ab = alertBlocks[i];
+        const formattedBody = formatInline(ab.body);
+        let blockHtml = '';
+        if (ab.isAlert) {
+          const cfg = alertConfigs[ab.type] || alertConfigs.NOTE;
+          blockHtml = `
+            <div class="my-4 p-3.5 rounded-r-xl ${cfg.classes} text-xs sm:text-sm space-y-1.5 shadow-sm">
+              <div class="font-bold flex items-center gap-1.5 ${cfg.iconClass}">
+                <i data-lucide="${cfg.icon}" class="w-4 h-4 flex-shrink-0"></i>
+                <span>${cfg.title}</span>
+              </div>
+              <div class="leading-relaxed opacity-95">${formattedBody}</div>
+            </div>
+          `;
+        } else {
+          blockHtml = `
+            <div class="my-4 pl-4 border-l-4 border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 p-3 rounded-r-lg text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed">
+              ${formattedBody}
+            </div>
+          `;
+        }
+        out = out.replace(`___ALERT_BLOCK_${i}___`, blockHtml);
+      }
+
+      // 5. Restore code blocks with highlight formatting
+      for (let i = 0; i < codeBlocks.length; i++) {
+        const { lang, code } = codeBlocks[i];
+        let highlighted = '';
+        try {
+          if (window.hljs && hljs.getLanguage(lang)) {
+            highlighted = hljs.highlight(code, { language: lang }).value;
+          } else {
+            highlighted = highlightCode(code, lang);
+          }
+        } catch (e) {
+          highlighted = highlightCode(code, lang);
+        }
+
+        const blockHtml = `
+          <div class="my-5 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950 text-slate-100 shadow-sm">
+            <div class="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs text-slate-400 font-mono">
+              <span>${lang}</span>
+            </div>
+            <pre class="p-4 text-xs font-mono overflow-x-auto leading-relaxed"><code class="language-${lang}">${highlighted}</code></pre>
+          </div>
+        `;
+        out = out.replace(`___FENCED_CODE_${i}___`, blockHtml);
+      }
+
+      return `<div class="prose max-w-none text-slate-600 dark:text-slate-300"><p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">${out}</p></div>`;
     }
 
     /**
@@ -1623,6 +1805,7 @@
     const state = {
       rawSpec: null,
       parsedSpec: null,
+      selectedPageId: null,
       selectedEndpointId: null,
       filterText: '',
       selectedTag: 'all',
@@ -1635,6 +1818,7 @@
       selectedCodeLang: 'curl',        // 'curl' | 'javascript' | 'php' | 'golang'
       mobileNavOpen: false,
       darkMode: false,
+      apiToken: localStorage.getItem("openapi_viewer_api_token") || "",
       liveParamValues: {},
       liveBodyText: null,
       tryRequestState: {
@@ -1660,10 +1844,13 @@
         state.filterText = '';
         state.selectedTag = 'all';
 
-        // Select first endpoint by default
-        if (parsed.endpoints.length > 0) {
+        // Select first page if present, else first endpoint
+        if (parsed.pages && parsed.pages.length > 0) {
+          selectPage(parsed.pages[0].id, false);
+        } else if (parsed.endpoints.length > 0) {
           selectEndpoint(parsed.endpoints[0].id, false);
         } else {
+          state.selectedPageId = null;
           state.selectedEndpointId = null;
         }
 
@@ -1682,8 +1869,41 @@
       }
     }
 
+    function getSelectedPage() {
+      if (!state.parsedSpec || !state.parsedSpec.pages) return null;
+      return state.parsedSpec.pages.find(p => p.id === state.selectedPageId) || null;
+    }
+
+    function selectPage(pageId, updateUrlHash = true) {
+      state.selectedPageId = pageId;
+      state.selectedEndpointId = null;
+
+      if (state.mobileNavOpen) {
+        toggleMobileDrawer(false);
+      }
+
+      // Hide right code column when reading custom documentation page
+      const codeCol = document.getElementById("code-container");
+      if (codeCol) {
+        codeCol.classList.add("lg:hidden");
+      }
+
+      renderSidebar();
+      renderDetails();
+
+      const docsEl = document.getElementById("docs-container");
+      if (docsEl) docsEl.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     function selectEndpoint(endpointId, updateUrlHash = true) {
       state.selectedEndpointId = endpointId;
+      state.selectedPageId = null;
+
+      // Ensure right code column is visible on desktop for endpoints
+      const codeCol = document.getElementById("code-container");
+      if (codeCol) {
+        codeCol.classList.remove("lg:hidden");
+      }
       const endpoint = getSelectedEndpoint();
       if (endpoint && endpoint.responses.length > 0) {
         state.activeResponseCode = endpoint.responses[0].statusCode;
@@ -1939,11 +2159,49 @@
 
     function renderHeader() {
       if (!state.parsedSpec) return;
-      const { info, specType, baseUrl } = state.parsedSpec;
+      const { info } = state.parsedSpec;
 
       document.getElementById('header-api-title').textContent = info.title;
       document.getElementById('header-api-version').textContent = `v${info.version}`;
-      document.getElementById('header-spec-type').textContent = specType;
+
+      updateAuthUI();
+    }
+
+    function updateAuthUI() {
+      const authLabel = document.getElementById('btn-auth-label');
+      const authDot = document.getElementById('auth-status-dot');
+      const authBtn = document.getElementById('btn-open-auth-modal');
+
+      if (state.apiToken) {
+        if (authLabel) authLabel.textContent = 'Authorized';
+        if (authDot) authDot.classList.remove('hidden');
+        if (authBtn) {
+          authBtn.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/40', 'text-emerald-700', 'dark:text-emerald-300');
+          authBtn.classList.remove('border-slate-200', 'dark:border-slate-700', 'bg-slate-50', 'dark:bg-slate-800/80', 'text-slate-700', 'dark:text-slate-200');
+        }
+      } else {
+        if (authLabel) authLabel.textContent = 'Authorize';
+        if (authDot) authDot.classList.add('hidden');
+        if (authBtn) {
+          authBtn.classList.remove('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/40', 'text-emerald-700', 'dark:text-emerald-300');
+          authBtn.classList.add('border-slate-200', 'dark:border-slate-700', 'bg-slate-50', 'dark:bg-slate-800/80', 'text-slate-700', 'dark:text-slate-200');
+        }
+      }
+    }
+
+    function setApiToken(token, skipRenderInteractive = false) {
+      state.apiToken = token || '';
+      const cleanToken = state.apiToken.trim();
+      if (cleanToken) {
+        localStorage.setItem('openapi_viewer_api_token', cleanToken);
+      } else {
+        localStorage.removeItem('openapi_viewer_api_token');
+      }
+      updateAuthUI();
+      renderCodeSnippet();
+      if (!skipRenderInteractive) {
+        renderInteractiveClient();
+      }
     }
 
     function renderSidebar() {
@@ -1952,9 +2210,15 @@
       const counterEl = document.getElementById('sidebar-endpoint-counter');
       if (!navEl || !state.parsedSpec) return;
 
-      const { endpoints, tags } = state.parsedSpec;
+      const { endpoints, tags, pages = [] } = state.parsedSpec;
       const query = state.filterText;
       const selectedTag = state.selectedTag;
+
+      // Filter pages (guides)
+      const filteredPages = pages.filter(p => {
+        if (!query) return true;
+        return p.title.toLowerCase().includes(query) || p.content.toLowerCase().includes(query);
+      });
 
       // Filter endpoints
       const filtered = endpoints.filter(ep => {
@@ -1970,7 +2234,8 @@
         );
       });
 
-      counterEl.textContent = `${filtered.length} of ${endpoints.length} endpoints`;
+      const pagesCountStr = pages.length > 0 ? `${pages.length} guides, ` : '';
+      counterEl.textContent = `${pagesCountStr}${filtered.length} of ${endpoints.length} endpoints`;
 
       // Render Tag Filter Pills
       let tagHtml = `
@@ -1997,18 +2262,58 @@
       }
       tagFilterContainer.innerHTML = tagHtml;
 
-      // Empty State
-      if (filtered.length === 0) {
+      // Empty State (if no pages and no endpoints match)
+      if (filtered.length === 0 && filteredPages.length === 0) {
         navEl.innerHTML = `
           <div class="p-6 text-center text-slate-400 dark:text-slate-500">
             <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-60"></i>
-            <p class="text-xs font-medium">No endpoints matching</p>
+            <p class="text-xs font-medium">No results matching</p>
             <p class="text-[11px] font-mono mt-0.5 text-slate-500">"${query}"</p>
             <button id="btn-reset-filter" class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">Clear search</button>
           </div>
         `;
         lucide.createIcons();
         return;
+      }
+
+      let navHtml = '';
+
+      // Render Custom Pages / Guides Section
+      if (filteredPages.length > 0) {
+        navHtml += `
+          <div class="space-y-1 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="px-2 py-1 text-[11px] font-semibold tracking-wider uppercase text-slate-600 dark:text-slate-300 flex items-center justify-between">
+              <span>Overview & Guides</span>
+              <span class="text-[10px] text-slate-600 dark:text-slate-300 font-mono font-medium">${filteredPages.length}</span>
+            </div>
+            <div class="space-y-0.5">
+        `;
+
+        for (const page of filteredPages) {
+          const isSelected = page.id === state.selectedPageId;
+          const activeClass = isSelected
+            ? 'bg-blue-50/90 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 border-l-2 border-blue-600 dark:border-blue-400 font-medium'
+            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 border-l-2 border-transparent';
+
+          navHtml += `
+            <button 
+              data-page-id="${page.id}" 
+              class="page-nav-item w-full text-left px-2.5 py-1.5 rounded-r-lg transition flex items-center gap-2 group ${activeClass}"
+            >
+              <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                <i data-lucide="${page.icon || 'book-open'}" class="w-3.5 h-3.5"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs truncate font-medium">${page.title}</div>
+              </div>
+            </button>
+          `;
+        }
+
+        navHtml += `
+            </div>
+          </div>
+        `;
       }
 
       // Group endpoints by Tag
@@ -2018,8 +2323,6 @@
         if (!grouped[primaryTag]) grouped[primaryTag] = [];
         grouped[primaryTag].push(ep);
       }
-
-      let navHtml = '';
       for (const [tagName, groupEndpoints] of Object.entries(grouped)) {
         navHtml += `
           <div class="space-y-1">
@@ -2062,8 +2365,37 @@
 
     function renderDetails() {
       const viewEl = document.getElementById('endpoint-details-view');
+      if (!viewEl || !state.parsedSpec) return;
+
+      // Check if a custom documentation page is currently selected
+      if (state.selectedPageId) {
+        const page = getSelectedPage();
+        if (page) {
+          viewEl.innerHTML = `
+            <div class="space-y-6 sm:space-y-8 w-full min-w-0">
+              <div class="border-b border-slate-200 dark:border-slate-800 pb-6 space-y-3">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80">
+                  <i data-lucide="${page.icon || 'book-open'}" class="w-3.5 h-3.5"></i>
+                  <span>Documentation</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white break-words">
+                  ${page.title}
+                </h1>
+              </div>
+
+              <!-- Page Markdown / HTML Content -->
+              <div class="page-content-wrapper leading-relaxed text-slate-700 dark:text-slate-300">
+                ${renderMarkdown(page.content)}
+              </div>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+      }
+
       const endpoint = getSelectedEndpoint();
-      if (!viewEl || !endpoint || !state.parsedSpec) return;
+      if (!endpoint) return;
 
       const { baseUrl } = state.parsedSpec;
 
@@ -2602,7 +2934,34 @@
       if (!inputsContainer || !endpoint) return;
 
       // Populate interactive inputs
-      let html = '';
+      let html = `
+        <div class="space-y-1 pb-2 border-b border-slate-800">
+          <div class="flex items-center justify-between text-[11px]">
+            <label class="font-mono text-slate-300 font-medium flex items-center gap-1">
+              <i data-lucide="key" class="w-3 h-3 text-blue-400"></i>
+              <span>Authorization</span>
+            </label>
+            <span class="text-slate-500 text-[10px] font-mono">header (Bearer)</span>
+          </div>
+          <div class="relative flex items-center">
+            <input 
+              type="password" 
+              id="live-auth-input" 
+              value="${state.apiToken ? state.apiToken.replace(/"/g, "&quot;") : ""}" 
+              placeholder="Enter API Token or Bearer Token..." 
+              class="w-full pl-2.5 pr-8 py-1 text-xs bg-slate-950 border border-slate-700 rounded-md text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 font-mono"
+            >
+            <button 
+              type="button" 
+              id="btn-toggle-live-mask" 
+              class="absolute right-1.5 text-slate-400 hover:text-slate-200 p-1 focus:outline-none transition" 
+              title="Toggle token visibility"
+            >
+              <i data-lucide="eye" class="w-3.5 h-3.5" id="icon-live-mask"></i>
+            </button>
+          </div>
+        </div>
+      `;
       if (endpoint.parameters.length > 0) {
         html += `<div class="space-y-2">`;
         for (const p of endpoint.parameters) {
@@ -2696,6 +3055,8 @@
       } else {
         responseContainer.classList.add('hidden');
       }
+
+      lucide.createIcons();
     }
 
     /**
@@ -2740,6 +3101,9 @@
       const headers = { 'Accept': 'application/json' };
       if (endpoint.requestBody) {
         headers['Content-Type'] = endpoint.requestBody.contentType || 'application/json';
+      }
+      if (state.apiToken) {
+        headers['Authorization'] = `Bearer ${state.apiToken}`;
       }
       const headerParams = endpoint.parameters.filter(p => p.in === 'header');
       for (const h of headerParams) {
@@ -2899,14 +3263,21 @@
     }
 
     function initEventListeners() {
-      // 1. Endpoint Navigation Clicks (Event Delegation on nav-endpoints-tree)
+      // 1. Navigation Clicks (Guides and Endpoints - Event Delegation on nav-endpoints-tree)
       const navTree = document.getElementById('nav-endpoints-tree');
       if (navTree) {
         navTree.addEventListener('click', (e) => {
+          const pageItem = e.target.closest('.page-nav-item');
+          if (pageItem) {
+            const pageId = pageItem.getAttribute('data-page-id');
+            if (pageId) selectPage(pageId);
+            return;
+          }
           const item = e.target.closest('.endpoint-nav-item');
           if (item) {
             const epId = item.getAttribute('data-endpoint-id');
             if (epId) selectEndpoint(epId);
+            return;
           }
           if (e.target.id === 'btn-reset-filter') {
             const input = document.getElementById('input-filter');
@@ -3109,8 +3480,25 @@
       // 16. Interactive Input Changes (Event Delegation)
       const interactiveInputsContainer = document.getElementById('interactive-inputs-container');
       if (interactiveInputsContainer) {
+        interactiveInputsContainer.addEventListener('click', (e) => {
+          const toggleBtn = e.target.closest('#btn-toggle-live-mask');
+          if (toggleBtn) {
+            const liveInput = document.getElementById('live-auth-input');
+            if (liveInput) {
+              const isPassword = liveInput.type === 'password';
+              liveInput.type = isPassword ? 'text' : 'password';
+              toggleBtn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5" id="icon-live-mask"></i>`;
+              lucide.createIcons();
+            }
+          }
+        });
         interactiveInputsContainer.addEventListener('input', (e) => {
-          if (e.target.classList.contains('live-param-input')) {
+          if (e.target.id === 'live-auth-input') {
+            // Pass true to prevent re-rendering inputs and losing input focus on keystroke
+            setApiToken(e.target.value, true);
+            const modalInput = document.getElementById('input-auth-token');
+            if (modalInput) modalInput.value = state.apiToken;
+          } else if (e.target.classList.contains('live-param-input')) {
             const paramName = e.target.getAttribute('data-param-name');
             state.liveParamValues[paramName] = e.target.value;
             renderCodeSnippet();
@@ -3211,6 +3599,80 @@
         });
       }
 
+      // 18. Authorization Modal Event Handlers
+      const authModal = document.getElementById('auth-modal');
+      const openAuthBtn = document.getElementById('btn-open-auth-modal');
+      const closeAuthBtn = document.getElementById('btn-close-auth-modal');
+      const cancelAuthBtn = document.getElementById('btn-cancel-auth-modal');
+      const saveAuthBtn = document.getElementById('btn-save-auth-token');
+      const clearAuthBtn = document.getElementById('btn-clear-auth-token');
+      const authInput = document.getElementById('input-auth-token');
+      const toggleModalMaskBtn = document.getElementById('btn-toggle-modal-mask');
+
+      if (toggleModalMaskBtn) {
+        toggleModalMaskBtn.addEventListener('click', () => {
+          if (!authInput) return;
+          const isPassword = authInput.type === 'password';
+          authInput.type = isPassword ? 'text' : 'password';
+          toggleModalMaskBtn.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" class="w-4 h-4" id="icon-modal-mask"></i>`;
+          lucide.createIcons();
+        });
+      }
+
+      const toggleAuthModal = (open) => {
+        if (!authModal) return;
+        if (open) {
+          if (authInput) authInput.value = state.apiToken || '';
+          authModal.classList.remove('hidden');
+          if (authInput) setTimeout(() => authInput.focus(), 50);
+        } else {
+          authModal.classList.add('hidden');
+        }
+      };
+
+      if (openAuthBtn) openAuthBtn.addEventListener('click', () => toggleAuthModal(true));
+      if (closeAuthBtn) closeAuthBtn.addEventListener('click', () => toggleAuthModal(false));
+      if (cancelAuthBtn) cancelAuthBtn.addEventListener('click', () => toggleAuthModal(false));
+      if (authModal) {
+        authModal.addEventListener('click', (e) => {
+          if (e.target === authModal) toggleAuthModal(false);
+        });
+      }
+
+      if (saveAuthBtn) {
+        saveAuthBtn.addEventListener('click', () => {
+          const val = authInput ? authInput.value : '';
+          setApiToken(val);
+          toggleAuthModal(false);
+          if (val.trim()) {
+            showToast('Authorization token saved', 'success');
+          } else {
+            showToast('Authorization token cleared', 'info');
+          }
+        });
+      }
+
+      if (clearAuthBtn) {
+        clearAuthBtn.addEventListener('click', () => {
+          if (authInput) authInput.value = '';
+          setApiToken('');
+          toggleAuthModal(false);
+          showToast('Authorization token cleared', 'info');
+        });
+      }
+
+      if (authInput) {
+        authInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (saveAuthBtn) saveAuthBtn.click();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            toggleAuthModal(false);
+          }
+        });
+      }
+
       // 16. Alert Dismiss Button
       const dismissAlertBtn = document.getElementById('btn-dismiss-alert');
       if (dismissAlertBtn) {
@@ -3253,6 +3715,9 @@
         renderEmptyState();
       }
 
+      // Initialize auth UI state
+      updateAuthUI();
+
       // Initialize icons
       lucide.createIcons();
     }
@@ -3264,5 +3729,66 @@
       initApp();
     }
   </script>
+  <!-- ========================================== -->
+  <!-- AUTHORIZATION TOKEN MODAL                  -->
+  <!-- ========================================== -->
+  <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in duration-150">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">API Authorization</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Bearer Token Authentication</p>
+          </div>
+        </div>
+        <button id="btn-close-auth-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <label for="input-auth-token" class="block text-xs font-medium text-slate-700 dark:text-slate-300">
+          Bearer Token / API Key
+        </label>
+        <div class="relative flex items-center">
+          <input 
+            type="password" 
+            id="input-auth-token" 
+            placeholder="e.g. your_api_token_here" 
+            class="w-full pl-3 pr-9 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+          <button 
+            type="button" 
+            id="btn-toggle-modal-mask" 
+            class="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 focus:outline-none transition" 
+            title="Toggle token visibility"
+          >
+            <i data-lucide="eye" class="w-4 h-4" id="icon-modal-mask"></i>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          This token will be injected as <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[10px] text-blue-600 dark:text-blue-400">Authorization: Bearer &lt;API_TOKEN&gt;</code> in code examples (cURL, JS, PHP, Go) and live requests. Saved in your browser session.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <button id="btn-clear-auth-token" class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium">
+          Clear Token
+        </button>
+        <div class="flex items-center gap-2">
+          <button id="btn-cancel-auth-modal" class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+            Cancel
+          </button>
+          <button id="btn-save-auth-token" class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition">
+            Save Token
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

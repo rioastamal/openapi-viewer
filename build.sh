@@ -65,6 +65,7 @@ ${C_CYAN}Options:${C_RESET}
   -o, --output <path>       Output standalone HTML file path (Default: build/index.html)
   -t, --template <path>     Viewer HTML template file path (Default: src/index.html)
       --theme <name|path>   Theme name or CSS file path (Default: default)
+      --server-url <url>    Override default API server/base URL from JSON spec
   -m, --minify              Minify JSON specification before injection
       --disable-load-url    Disable / omit the remote URL input and fetch component
       --disable-upload      Disable / omit the local JSON file upload component
@@ -74,6 +75,7 @@ ${C_CYAN}Examples:${C_RESET}
   bash build.sh --spec-file examples/petstore.json
   bash build.sh --spec-file spec.json --theme default
   bash build.sh --spec-file spec.json --output dist/index.html --minify
+  bash build.sh --spec-file examples/petstore.json --server-url https://api.prod.example.com/v1
   bash build.sh --spec-file examples/petstore.json --disable-load-url --disable-upload
 USAGE
 }
@@ -83,6 +85,7 @@ SPEC_FILE=""
 OUTPUT_FILE="build/index.html"
 TEMPLATE_FILE="src/index.html"
 THEME="default"
+SERVER_URL=""
 MINIFY=false
 DISABLE_LOAD_URL=false
 DISABLE_UPLOAD=false
@@ -124,6 +127,15 @@ while [ $# -gt 0 ]; do
         exit 1
       fi
       THEME="$2"
+      shift 2
+      ;;
+    --server-url)
+      if [ -z "${2:-}" ] || [[ "$2" == -* ]]; then
+        log_error "Missing value for $1"
+        print_usage
+        exit 1
+      fi
+      SERVER_URL="$2"
       shift 2
       ;;
     -m|--minify)
@@ -256,11 +268,11 @@ if [ ! -d "$OUTPUT_DIR" ]; then
 fi
 
 # Step 8: Prepare JSON stream (minified or formatted)
-TEMP_SPEC="$(mktemp "${TMPDIR:-/tmp}/spec.XXXXXX.json")"
-TEMP_BUILD="$(mktemp "${TMPDIR:-/tmp}/viewer.XXXXXX.html")"
-TEMP_FILTERED="$(mktemp "${TMPDIR:-/tmp}/viewer_filtered.XXXXXX.html")"
-TEMP_THEMED="$(mktemp "${TMPDIR:-/tmp}/viewer_themed.XXXXXX.html")"
-trap 'rm -f "$TEMP_SPEC" "$TEMP_BUILD" "$TEMP_FILTERED" "$TEMP_THEMED"' EXIT
+TEMP_SPEC="$(mktemp "${TMPDIR:-/tmp}/spec.XXXXXX")"
+TEMP_BUILD="$(mktemp "${TMPDIR:-/tmp}/viewer.XXXXXX")"
+TEMP_FILTERED="$(mktemp "${TMPDIR:-/tmp}/viewer_filtered.XXXXXX")"
+TEMP_THEMED="$(mktemp "${TMPDIR:-/tmp}/viewer_themed.XXXXXX")"
+trap 'rm -f "$TEMP_SPEC" "$TEMP_BUILD" "$TEMP_FILTERED" "$TEMP_THEMED" "${TEMP_SERVER:-}"' EXIT
 
 if [ "$MINIFY" = true ]; then
   log_info "Minifying specification JSON..."
@@ -293,6 +305,25 @@ echo ";" >> "$TEMP_BUILD"
 # Part 3: Injected end marker + lines from end marker to end of template
 echo "    // __EMBEDDED_SPEC_END__" >> "$TEMP_BUILD"
 sed -e "1,/\/\/ __EMBEDDED_SPEC_END__/d" "$TEMPLATE_FILE" >> "$TEMP_BUILD"
+
+# Step 9a: Inject server URL override if specified
+MARKER_SERVER_START="__EMBEDDED_SERVER_URL_START__"
+MARKER_SERVER_END="__EMBEDDED_SERVER_URL_END__"
+
+if grep -q "$MARKER_SERVER_START" "$TEMP_BUILD" && grep -q "$MARKER_SERVER_END" "$TEMP_BUILD"; then
+  TEMP_SERVER="$(mktemp "${TMPDIR:-/tmp}/viewer_server.XXXXXX")"
+  sed -e "/$MARKER_SERVER_START/q" "$TEMP_BUILD" > "$TEMP_SERVER"
+  if [ -n "$SERVER_URL" ]; then
+    log_info "Overriding server base URL: ${C_CYAN}$SERVER_URL${C_RESET}"
+    echo "    const EMBEDDED_SERVER_URL = \"$SERVER_URL\";" >> "$TEMP_SERVER"
+  else
+    echo "    const EMBEDDED_SERVER_URL = null;" >> "$TEMP_SERVER"
+  fi
+  echo "    // __EMBEDDED_SERVER_URL_END__" >> "$TEMP_SERVER"
+  sed -e "1,/$MARKER_SERVER_END/d" "$TEMP_BUILD" >> "$TEMP_SERVER"
+  mv "$TEMP_SERVER" "$TEMP_BUILD"
+fi
+
 
 # Step 9b: Stream-inject theme CSS into bundle
 if grep -q "$MARKER_THEME_START" "$TEMP_BUILD" && grep -q "$MARKER_THEME_END" "$TEMP_BUILD"; then
@@ -342,6 +373,7 @@ log_success "${C_BOLD}Bundle built successfully!${C_RESET}"
 echo -e "  ${C_GRAY}•${C_RESET} Specification:  ${C_CYAN}$SPEC_FILE${C_RESET} ($SPEC_SIZE)"
 echo -e "  ${C_GRAY}•${C_RESET} Template:       ${C_CYAN}$TEMPLATE_FILE${C_RESET}"
 echo -e "  ${C_GRAY}•${C_RESET} Theme:          ${C_CYAN}$THEME${C_RESET} ($THEME_FILE)"
+echo -e "  ${C_GRAY}•${C_RESET} Server URL:     $([ -n "$SERVER_URL" ] && echo -e "${C_CYAN}$SERVER_URL${C_RESET} (overridden)" || echo -e "${C_GRAY}Default from specification${C_RESET}")"
 echo -e "  ${C_GRAY}•${C_RESET} Output:         ${C_GREEN}${C_BOLD}$OUTPUT_FILE${C_RESET} ($BUNDLE_SIZE, $TOTAL_LINES lines)"
 echo -e "  ${C_GRAY}•${C_RESET} Remote URL:     $([ "$DISABLE_LOAD_URL" = true ] && echo -e "${C_YELLOW}Disabled (omitted)${C_RESET}" || echo -e "${C_GREEN}Enabled${C_RESET}")"
 echo -e "  ${C_GRAY}•${C_RESET} File Upload:    $([ "$DISABLE_UPLOAD" = true ] && echo -e "${C_YELLOW}Disabled (omitted)${C_RESET}" || echo -e "${C_GREEN}Enabled${C_RESET}")"

@@ -306,5 +306,19 @@
         }
       }
     }
-  }
+  },
+  "x-pages": [
+    {
+      "id": "introduction",
+      "title": "Introduction",
+      "icon": "book-open",
+      "content": "# Swagger Petstore API\n\nWelcome to the **Swagger Petstore** developer documentation and API reference. This service provides endpoints to manage pets in inventory, retrieve detailed pet information, and track pet orders.\n\n## Overview\n\nThe Petstore API is built using modern REST conventions and specifications:\n- Standard HTTP status codes (`200 OK`, `201 Created`, `204 No Content`, `400 Bad Request`, `404 Not Found`, etc.)\n- JSON-encoded request and response bodies\n- Resource-oriented URLs\n\n## Base URL\n\nAll requests are served over HTTPS relative to the following base endpoint:\n\n```bash\nhttps://petstore.swagger.io/v1\n```\n\n> **Note:** For quick testing in local development or sandboxes, you can explore the interactive endpoint tester in this documentation viewer!\n\n## Quick Start Example\n\nRetrieve all available pets in the store with an optional limit:\n\n```bash\ncurl -X GET \"https://petstore.swagger.io/v1/pets?limit=10\" \\\n  -H \"Accept: application/json\"\n```\n\nSample JSON response:\n\n```json\n[\n  {\n    \"id\": 1,\n    \"name\": \"Fido\",\n    \"tag\": \"dog\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"Whiskers\",\n    \"tag\": \"cat\"\n  }\n]\n```\n"
+    },
+    {
+      "id": "registration",
+      "title": "Registration & Authentication",
+      "icon": "key",
+      "content": "# Registration & API Authentication\n\nLearn how to create your developer account and obtain credentials to access the Petstore API.\n\n## 1. Developer Registration\n\nTo create an account:\n\n1. Visit the [Petstore Developer Portal](https://petstore.swagger.io) and click **Sign Up**.\n2. Provide your work email address and password.\n3. Verify your email address via the confirmation link.\n\n## 2. Generating an API Key\n\nOnce your account is registered:\n\n- Navigate to **Dashboard** &rarr; **API Keys**.\n- Click **Create New Key** and assign a descriptive label (e.g. `Development Laptop`).\n- Copy your API secret key immediately. For security, it will not be displayed again.\n\n## 3. Using Your API Key\n\nInclude your API key as a custom header in all authenticated HTTP requests:\n\n```bash\ncurl -X GET \"https://petstore.swagger.io/v1/pets\" \\\n  -H \"X-API-Key: YOUR_API_KEY_HERE\"\n```\n\n```javascript\nfetch(\"https://petstore.swagger.io/v1/pets\", {\n  headers: {\n    \"X-API-Key\": \"YOUR_API_KEY_HERE\",\n    \"Accept\": \"application/json\"\n  }\n});\n```\n\n### Rate Limiting\n\n- **Free Tier:** 100 requests per minute\n- **Production Tier:** 5,000 requests per minute\n\nIf you exceed the rate limit, the API returns HTTP status `429 Too Many Requests`.\n"
+    }
+  ]
 }
