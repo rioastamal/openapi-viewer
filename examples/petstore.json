@@ -22,6 +22,11 @@
   ],
   "paths": {
     "/pets": {
+      "x-page": {
+        "icon": "paw-print",
+        "title": "Pets overview",
+        "content": "Manage pets in the store. Use GET /pets to retrieve a paginated list of available pets, or POST /pets to add a new pet to the store."
+      },
       "get": {
         "summary": "List all pets",
         "description": "Returns a list of pets available in the store with optional pagination limit.",

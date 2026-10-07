@@ -1,5 +1,28 @@
 # Implementation Summary
 
+- **Path-level `x-page` Documentation Support**:
+  - Revoked the tag description `page:` prefix parsing.
+  - Added support for optional `x-page` (or `x-pages`) on each path definition in `paths[pathStr]`.
+  - Contains `title`, `icon`, and `content`.
+  - Rendered in the sidebar navigation directly before the endpoint operations of that path (e.g. renders `"Pets Overview"` before `"GET /pets"`).
+  - Uses the specified `icon` (defaulting to `info`).
+  - Clicking the item opens the page in the main documentation view rendered with Markdown, GFM alerts, code blocks, and diagrams, identically to top-level `x-pages`.
+
+- **Live Client Server URL Override**:
+  - Added a **Server URL** input field at the top of the **Live Client (Try It)** tool in [src/index.html](file:///Users/rioastamal/Projects/openapi-swagger-viewer/src/index.html).
+  - Pre-populated with the specification's default `baseUrl` (or custom `--server-url`).
+  - Allows users to interactively override the server base URL (e.g. testing against local `http://localhost:8080`, staging, or alternative gateways).
+  - Automatically updates the live requests executed by `executeLiveRequest` as well as the multi-language code snippets and copy snippets in real time.
+
+- **Collapsible Navigation Sidebar & Persistent Live Client Arrow (Desktop Only)**:
+  - **Navigation Sidebar Toggle Inside Sidebar**: Placed the collapse button (`#btn-toggle-sidebar`) inside the sidebar container directly above the filter/search box, showing `< Endpoints and Guides` (with a `chevron-left` icon). Hidden on mobile (`hidden lg:flex`).
+  - **Docked Navigation Expand Arrow**: When the sidebar is collapsed on desktop, a docked toggle button (`#btn-expand-sidebar`) with `chevron-right` appears on the left side of the documentation view to quickly bring back the navigation. Hidden on mobile (`hidden lg:flex`).
+  - **Persistent Live Client Arrow**: In the Live Client / Code panel header, a collapse arrow (`#btn-toggle-code-panel`, `chevron-right`) collapses the panel on desktop (`hidden lg:inline-flex`). When collapsed, a docked button (`#btn-expand-code-panel`, `chevron-left`) stays anchored on the right edge of the documentation container on desktop (`hidden lg:flex`) to restore the panel on demand. Mobile screens use native drawer navigation and mobile tabs.
+
+- **Empty Initial Value for Live Client Parameters**:
+  - Updated parameter initialization in [src/index.html](file:///Users/rioastamal/Projects/openapi-swagger-viewer/src/index.html) so parameters without an explicit `example`, `default`, or `enum` are initialized to empty string (`""`) rather than pre-filling `"sample_value"`.
+  - Preserves the placeholder text (`placeholder="${p.example !== undefined ? p.example : p.type}"`) so users see guidance without having to manually backspace or clear pre-filled dummy strings.
+
 - **GitHub-Flavored Markdown (GFM) Alert Box Support**:
   - Upgraded `renderMarkdown()` in [src/index.html](file:///Users/rioastamal/Projects/openapi-swagger-viewer/src/index.html) to support multi-line GFM alert callouts.
   - Alert types supported:

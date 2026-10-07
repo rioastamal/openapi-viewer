@@ -260,6 +260,21 @@
         </button>
       </div>
 
+      <!-- Desktop Sidebar Collapse Header (Above Search Box) -->
+      <div class="hidden lg:flex items-center justify-between px-3.5 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 flex-shrink-0">
+        <button 
+          id="btn-toggle-sidebar" 
+          class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition group"
+          title="Collapse Navigation Sidebar"
+          aria-label="Collapse Navigation Sidebar"
+        >
+          <span class="p-1 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          </span>
+          <span id="sidebar-header-label" class="tracking-tight">Endpoints and Guides</span>
+        </button>
+      </div>
+
       <!-- Navigation Search Bar -->
       <div class="p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900 flex-shrink-0">
         <div class="relative">
@@ -300,7 +315,29 @@
     <!-- ======================================== -->
     <!-- MIDDLE COLUMN: DOCUMENTATION (45-50%)    -->
     <!-- ======================================== -->
-    <main id="docs-container" class="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 h-full min-h-0">
+    <main id="docs-container" class="flex-1 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 h-full min-h-0 relative">
+      <!-- Docked Sticky Expand Navigation Button (Visible on Desktop when Sidebar is Collapsed) -->
+      <button 
+        id="btn-expand-sidebar" 
+        class="hidden fixed left-2 top-20 z-30 p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-md border border-slate-200 dark:border-slate-700 transition items-center gap-1 text-xs font-medium group"
+        title="Show Navigation Sidebar"
+        aria-label="Show Navigation Sidebar"
+      >
+        <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+        <span class="hidden xl:inline text-[11px]">Navigation</span>
+      </button>
+
+      <!-- Docked Sticky Toggle Live Client / Code Panel Arrow Button (Visible on Desktop when Panel is Collapsed) -->
+      <button 
+        id="btn-expand-code-panel" 
+        class="hidden fixed right-2 top-20 z-30 p-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 shadow-md border border-slate-700 transition items-center gap-1 text-xs font-medium group"
+        title="Show Live Client &amp; Code Panel"
+        aria-label="Show Live Client &amp; Code Panel"
+      >
+        <i data-lucide="chevron-left" class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform"></i>
+        <span class="hidden xl:inline text-[11px]">Live Client</span>
+      </button>
+
       <!-- Dynamically populated by renderDetails() -->
       <div id="endpoint-details-view" class="max-w-3xl mx-auto space-y-6 sm:space-y-8 w-full min-w-0">
         <!-- Content rendered here -->
@@ -350,15 +387,27 @@
           </button>
         </div>
 
-        <!-- Copy Code Button -->
-        <button 
-          id="btn-copy-code" 
-          class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition shadow-sm flex-shrink-0"
-          title="Copy code snippet"
-        >
-          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-          <span id="copy-btn-text">Copy</span>
-        </button>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <!-- Copy Code Button -->
+          <button 
+            id="btn-copy-code" 
+            class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md transition shadow-sm flex-shrink-0"
+            title="Copy code snippet"
+          >
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span id="copy-btn-text">Copy</span>
+          </button>
+
+          <!-- Toggle Right Panel Button (Collapse Right - Desktop Only) -->
+          <button 
+            id="btn-toggle-code-panel" 
+            class="hidden lg:inline-flex p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition items-center justify-center"
+            title="Collapse Code &amp; Client Panel"
+            aria-label="Collapse Code &amp; Client Panel"
+          >
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Tab 1: Dynamic Fetch Code Snippet (Full Width, Ample Bottom Padding) -->
@@ -768,8 +817,27 @@
       const paths = raw.paths || {};
       const httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
 
+      // Map to hold path-level x-page definitions
+      const pathPages = {};
+
       for (const [pathStr, pathItem] of Object.entries(paths)) {
         if (!pathItem || typeof pathItem !== 'object') continue;
+
+        // Extract optional path-level x-page definition
+        const rawXPage = pathItem['x-page'] || pathItem['x-pages'];
+        if (rawXPage && typeof rawXPage === 'object') {
+          const xp = Array.isArray(rawXPage) ? rawXPage[0] : rawXPage;
+          if (xp) {
+            const pageId = `path-page-${pathStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            pathPages[pathStr] = {
+              id: pageId,
+              path: pathStr,
+              title: xp.title || xp.name || pathStr,
+              icon: xp.icon || 'info',
+              content: typeof xp.content === 'string' ? xp.content : (xp.description || '')
+            };
+          }
+        }
 
         // Path-level parameters
         const pathLevelParams = Array.isArray(pathItem.parameters) ? pathItem.parameters : [];
@@ -956,7 +1024,8 @@
             tags,
             parameters: normalizedParams,
             requestBody,
-            responses: normalizedResponses
+            responses: normalizedResponses,
+            pathPage: pathPages[pathStr] || null
           });
         }
       }
@@ -1001,7 +1070,8 @@
         baseUrl,
         endpoints,
         tags: Array.from(tagsMap.values()),
-        pages
+        pages,
+        pathPages: Object.values(pathPages)
       };
     }
 
@@ -1817,8 +1887,11 @@
       activeMobileTab: 'docs',         // 'docs' | 'code'
       selectedCodeLang: 'curl',        // 'curl' | 'javascript' | 'php' | 'golang'
       mobileNavOpen: false,
+      sidebarCollapsed: false,
+      codePanelCollapsed: false,
       darkMode: false,
       apiToken: localStorage.getItem("openapi_viewer_api_token") || "",
+      liveServerUrl: null,
       liveParamValues: {},
       liveBodyText: null,
       tryRequestState: {
@@ -1870,8 +1943,16 @@
     }
 
     function getSelectedPage() {
-      if (!state.parsedSpec || !state.parsedSpec.pages) return null;
-      return state.parsedSpec.pages.find(p => p.id === state.selectedPageId) || null;
+      if (!state.parsedSpec) return null;
+      if (state.parsedSpec.pages) {
+        const found = state.parsedSpec.pages.find(p => p.id === state.selectedPageId);
+        if (found) return found;
+      }
+      if (state.parsedSpec.pathPages) {
+        const foundPathPage = state.parsedSpec.pathPages.find(p => p.id === state.selectedPageId);
+        if (foundPathPage) return foundPathPage;
+      }
+      return null;
     }
 
     function selectPage(pageId, updateUrlHash = true) {
@@ -1882,10 +1963,15 @@
         toggleMobileDrawer(false);
       }
 
-      // Hide right code column when reading custom documentation page
+      // Hide right code column and expand button when reading custom documentation page
       const codeCol = document.getElementById("code-container");
       if (codeCol) {
         codeCol.classList.add("lg:hidden");
+      }
+      const expandBtn = document.getElementById('btn-expand-code-panel');
+      if (expandBtn) {
+        expandBtn.classList.add('hidden');
+        expandBtn.classList.remove('lg:flex');
       }
 
       renderSidebar();
@@ -1899,10 +1985,23 @@
       state.selectedEndpointId = endpointId;
       state.selectedPageId = null;
 
-      // Ensure right code column is visible on desktop for endpoints
+      // Ensure right code column is visible on desktop for endpoints (respecting user collapse state)
       const codeCol = document.getElementById("code-container");
+      const expandBtn = document.getElementById('btn-expand-code-panel');
       if (codeCol) {
-        codeCol.classList.remove("lg:hidden");
+        if (state.codePanelCollapsed) {
+          codeCol.classList.add("lg:hidden");
+          if (expandBtn) {
+            expandBtn.classList.remove('hidden');
+            expandBtn.classList.add('lg:flex');
+          }
+        } else {
+          codeCol.classList.remove("lg:hidden");
+          if (expandBtn) {
+            expandBtn.classList.add('hidden');
+            expandBtn.classList.remove('lg:flex');
+          }
+        }
       }
       const endpoint = getSelectedEndpoint();
       if (endpoint && endpoint.responses.length > 0) {
@@ -1920,7 +2019,7 @@
           if (p.example !== undefined) state.liveParamValues[p.name] = p.example;
           else if (p.default !== undefined) state.liveParamValues[p.name] = p.default;
           else if (p.enum && p.enum.length > 0) state.liveParamValues[p.name] = p.enum[0];
-          else state.liveParamValues[p.name] = p.type === 'integer' || p.type === 'number' ? '42' : 'sample_value';
+          else state.liveParamValues[p.name] = p.type === 'integer' || p.type === 'number' ? '42' : '';
         }
         if (endpoint.requestBody && endpoint.requestBody.examples && endpoint.requestBody.examples.length > 0) {
           const firstEx = endpoint.requestBody.examples[0];
@@ -2091,6 +2190,58 @@
       }
     }
 
+    function toggleSidebar(forceState) {
+      if (typeof forceState === 'boolean') {
+        state.sidebarCollapsed = forceState;
+      } else {
+        state.sidebarCollapsed = !state.sidebarCollapsed;
+      }
+      const sidebar = document.getElementById('sidebar-container');
+      const expandBtn = document.getElementById('btn-expand-sidebar');
+      if (sidebar) {
+        if (state.sidebarCollapsed) {
+          sidebar.classList.add('lg:hidden');
+          if (expandBtn) {
+            expandBtn.classList.remove('hidden');
+            expandBtn.classList.add('lg:flex');
+          }
+        } else {
+          sidebar.classList.remove('lg:hidden');
+          if (expandBtn) {
+            expandBtn.classList.add('hidden');
+            expandBtn.classList.remove('lg:flex');
+          }
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function toggleCodePanel(forceState) {
+      if (typeof forceState === 'boolean') {
+        state.codePanelCollapsed = forceState;
+      } else {
+        state.codePanelCollapsed = !state.codePanelCollapsed;
+      }
+      const codeCol = document.getElementById('code-container');
+      const expandBtn = document.getElementById('btn-expand-code-panel');
+
+      if (codeCol) {
+        if (state.codePanelCollapsed) {
+          codeCol.classList.add('lg:hidden');
+          if (expandBtn && state.selectedEndpointId) {
+            expandBtn.classList.remove('hidden');
+            expandBtn.classList.add('lg:flex');
+          }
+        } else {
+          codeCol.classList.remove('lg:hidden');
+          if (expandBtn) {
+            expandBtn.classList.add('hidden');
+            expandBtn.classList.remove('lg:flex');
+          }
+        }
+      }
+    }
+
     function toggleMobileDrawer(open) {
       state.mobileNavOpen = open;
       const sidebar = document.getElementById('sidebar-container');
@@ -2226,11 +2377,17 @@
         if (!matchesTag) return false;
 
         if (!query) return true;
+        const matchesPathPage = ep.pathPage && (
+          ep.pathPage.title.toLowerCase().includes(query) ||
+          ep.pathPage.content.toLowerCase().includes(query)
+        );
+
         return (
           ep.path.toLowerCase().includes(query) ||
           ep.summary.toLowerCase().includes(query) ||
           ep.method.toLowerCase().includes(query) ||
-          ep.tags.some(t => t.toLowerCase().includes(query))
+          ep.tags.some(t => t.toLowerCase().includes(query)) ||
+          matchesPathPage
         );
       });
 
@@ -2262,19 +2419,6 @@
       }
       tagFilterContainer.innerHTML = tagHtml;
 
-      // Empty State (if no pages and no endpoints match)
-      if (filtered.length === 0 && filteredPages.length === 0) {
-        navEl.innerHTML = `
-          <div class="p-6 text-center text-slate-400 dark:text-slate-500">
-            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-60"></i>
-            <p class="text-xs font-medium">No results matching</p>
-            <p class="text-[11px] font-mono mt-0.5 text-slate-500">"${query}"</p>
-            <button id="btn-reset-filter" class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">Clear search</button>
-          </div>
-        `;
-        lucide.createIcons();
-        return;
-      }
 
       let navHtml = '';
 
@@ -2323,6 +2467,20 @@
         if (!grouped[primaryTag]) grouped[primaryTag] = [];
         grouped[primaryTag].push(ep);
       }
+
+      if (filtered.length === 0 && filteredPages.length === 0) {
+        navEl.innerHTML = `
+          <div class="p-6 text-center text-slate-400 dark:text-slate-500">
+            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-60"></i>
+            <p class="text-xs font-medium">No results matching</p>
+            <p class="text-[11px] font-mono mt-0.5 text-slate-500">"${query}"</p>
+            <button id="btn-reset-filter" class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">Clear search</button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
       for (const [tagName, groupEndpoints] of Object.entries(grouped)) {
         navHtml += `
           <div class="space-y-1">
@@ -2333,7 +2491,32 @@
             <div class="space-y-0.5">
         `;
 
+        // Render x-page before endpoints of the path (deduplicated per tag)
+        const renderedPathPagesInTag = new Set();
+
         for (const ep of groupEndpoints) {
+          if (ep.pathPage && !renderedPathPagesInTag.has(ep.pathPage.id)) {
+            renderedPathPagesInTag.add(ep.pathPage.id);
+            const isSelected = ep.pathPage.id === state.selectedPageId;
+            const activeClass = isSelected
+              ? 'bg-blue-50/90 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 border-l-2 border-blue-600 dark:border-blue-400 font-medium'
+              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 border-l-2 border-transparent';
+
+            navHtml += `
+              <button 
+                data-page-id="${ep.pathPage.id}" 
+                class="page-nav-item w-full text-left px-2.5 py-1.5 rounded-r-lg transition flex items-center gap-2 group ${activeClass}"
+                title="${ep.pathPage.title}"
+              >
+                <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                  <i data-lucide="${ep.pathPage.icon || 'info'}" class="w-3.5 h-3.5 text-blue-500"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs truncate font-medium">${ep.pathPage.title}</div>
+                </div>
+              </button>
+            `;
+          }
           const isSelected = ep.id === state.selectedEndpointId;
           const activeClass = isSelected
             ? 'bg-blue-50/90 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200 border-l-2 border-blue-600 dark:border-blue-400 font-medium'
@@ -2894,7 +3077,10 @@
       if (!codeEl || !endpoint || !state.parsedSpec) return;
 
       const currentLang = state.selectedCodeLang || 'curl';
-      const code = generateCodeForLang(currentLang, endpoint, state.parsedSpec.baseUrl, state.liveParamValues, state.liveBodyText);
+      const activeBase = (state.liveServerUrl !== null && state.liveServerUrl.trim() !== '') 
+        ? state.liveServerUrl.trim() 
+        : state.parsedSpec.baseUrl;
+      const code = generateCodeForLang(currentLang, endpoint, activeBase, state.liveParamValues, state.liveBodyText);
       const hljsLang = currentLang === 'curl' ? 'bash' : (currentLang === 'golang' ? 'go' : currentLang);
       codeEl.className = `language-${hljsLang} block w-full`;
       codeEl.innerHTML = highlightCode(code, currentLang);
@@ -2933,8 +3119,31 @@
       const endpoint = getSelectedEndpoint();
       if (!inputsContainer || !endpoint) return;
 
+      const defaultBaseUrl = (state.parsedSpec && state.parsedSpec.baseUrl) ? state.parsedSpec.baseUrl : '';
+      const currentServerUrl = state.liveServerUrl !== null ? state.liveServerUrl : defaultBaseUrl;
+
       // Populate interactive inputs
       let html = `
+        <!-- Server URL Override Input -->
+        <div class="space-y-1 pb-2 border-b border-slate-800">
+          <div class="flex items-center justify-between text-[11px]">
+            <label class="font-mono text-slate-300 font-medium flex items-center gap-1">
+              <i data-lucide="server" class="w-3 h-3 text-emerald-400"></i>
+              <span>Server URL</span>
+            </label>
+            <span class="text-slate-500 text-[10px] font-mono">base url</span>
+          </div>
+          <div class="relative flex items-center">
+            <input 
+              type="url" 
+              id="live-server-url-input" 
+              value="${currentServerUrl.replace(/"/g, '&quot;')}" 
+              placeholder="${defaultBaseUrl || 'https://api.example.com'}" 
+              class="w-full px-2.5 py-1 text-xs bg-slate-950 border border-slate-700 rounded-md text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 font-mono"
+            >
+          </div>
+        </div>
+
         <div class="space-y-1 pb-2 border-b border-slate-800">
           <div class="flex items-center justify-between text-[11px]">
             <label class="font-mono text-slate-300 font-medium flex items-center gap-1">
@@ -3086,7 +3295,10 @@
         pathExpr = pathExpr.replace(`{${p.name}}`, encodeURIComponent(val));
       }
 
-      const cleanBase = (state.parsedSpec.baseUrl || 'https://api.example.com').replace(/\/$/, '');
+      const activeBase = (state.liveServerUrl !== null && state.liveServerUrl.trim() !== '') 
+        ? state.liveServerUrl.trim() 
+        : (state.parsedSpec.baseUrl || 'https://api.example.com');
+      const cleanBase = activeBase.replace(/\/$/, '');
       const url = new URL(`${cleanBase}${pathExpr}`);
 
       // Query params
@@ -3395,6 +3607,26 @@
         themeToggleBtn.addEventListener('click', toggleDarkMode);
       }
 
+      // Toggle Sidebar Buttons (Desktop)
+      const toggleSidebarBtn = document.getElementById('btn-toggle-sidebar');
+      if (toggleSidebarBtn) {
+        toggleSidebarBtn.addEventListener('click', () => toggleSidebar(true));
+      }
+      const expandSidebarBtn = document.getElementById('btn-expand-sidebar');
+      if (expandSidebarBtn) {
+        expandSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+      }
+
+      // Toggle Code Panel Buttons (Desktop)
+      const toggleCodePanelBtn = document.getElementById('btn-toggle-code-panel');
+      if (toggleCodePanelBtn) {
+        toggleCodePanelBtn.addEventListener('click', () => toggleCodePanel(true));
+      }
+      const expandCodePanelBtn = document.getElementById('btn-expand-code-panel');
+      if (expandCodePanelBtn) {
+        expandCodePanelBtn.addEventListener('click', () => toggleCodePanel(false));
+      }
+
       // 9. Mobile Menu Drawer Toggles
       const openDrawerBtn = document.getElementById('btn-toggle-mobile-menu');
       const closeDrawerBtn = document.getElementById('btn-close-mobile-menu');
@@ -3443,7 +3675,10 @@
           if (!endpoint || !state.parsedSpec) return;
 
           const lang = state.selectedCodeLang || 'curl';
-          const code = generateCodeForLang(lang, endpoint, state.parsedSpec.baseUrl, state.liveParamValues, state.liveBodyText);
+          const activeBase = (state.liveServerUrl !== null && state.liveServerUrl.trim() !== '') 
+            ? state.liveServerUrl.trim() 
+            : state.parsedSpec.baseUrl;
+          const code = generateCodeForLang(lang, endpoint, activeBase, state.liveParamValues, state.liveBodyText);
           try {
             await navigator.clipboard.writeText(code);
             const btnText = document.getElementById('copy-btn-text');
@@ -3493,7 +3728,10 @@
           }
         });
         interactiveInputsContainer.addEventListener('input', (e) => {
-          if (e.target.id === 'live-auth-input') {
+          if (e.target.id === 'live-server-url-input') {
+            state.liveServerUrl = e.target.value;
+            renderCodeSnippet();
+          } else if (e.target.id === 'live-auth-input') {
             // Pass true to prevent re-rendering inputs and losing input focus on keystroke
             setApiToken(e.target.value, true);
             const modalInput = document.getElementById('input-auth-token');
