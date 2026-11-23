@@ -1,5 +1,10 @@
 # Implementation Summary
 
+- **YAML Specification Support in `build.sh`**:
+  - Added `.yaml`/`.yml` (and fallback non-JSON content) detection, validation, and JSON conversion in [build.sh](file:///Users/rioastamal/Projects/openapi-swagger-viewer/build.sh) compatible with macOS Bash 3.2 and Linux.
+  - Fallback converter chain: `python3` (`PyYAML`) -> `ruby` (built-in `Psych` + `JSON`) -> `yq` -> `node` (`js-yaml`/`yaml`).
+  - Validates YAML syntax, rejects empty/multi-document/non-object roots, resolves anchors/merge keys (`<<: *alias`), normalizes `Date`/`Time` and non-string keys, coerces numeric `openapi`/`swagger` versions to strings, escapes `</script` sequences, and supports `--minify`.
+
 - **Path-level `x-page` Documentation Support**:
   - Revoked the tag description `page:` prefix parsing.
   - Added support for optional `x-page` (or `x-pages`) on each path definition in `paths[pathStr]`.
