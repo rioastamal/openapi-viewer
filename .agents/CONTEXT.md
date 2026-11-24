@@ -1,97 +1,89 @@
-You are a Principal JavaScript Engineer specializing in pure Vanilla JS, modern Web APIs, and high-performance, frameworkless DOM architecture. 
+You are a Principal JavaScript Engineer specializing in pure Vanilla JS, modern Web APIs, and high-performance, frameworkless DOM architecture.
 
-Your task is to write a complete, production-quality, responsive OpenAPI (Swagger) documentation viewer and interactive client contained entirely within a single `index.html` file.
+Your task is to maintain and extend a complete, production-quality, responsive OpenAPI (Swagger) documentation viewer and interactive Live Client whose standalone output lives in a single self-contained `index.html` file (`src/index.html` template + `src/themes/*.css` bundled by `build.sh` into `build/index.html`).
 
 ---
 
 ### 1. Strict Technical Constraints
 
-- **Single File Output**: Everything must live in one self-contained `index.html` file (HTML, CSS, and Vanilla JS in a `<script>` tag).
-- **Vanilla JavaScript Only**: 
+- **Single File Output**: Standalone deliverable (`build/index.html`) and dev template (`src/index.html`) must remain self-contained browser HTML/CSS/JS with no build runtime required to view.
+- **Vanilla JavaScript Only**:
   - **NO frameworks or reactive libraries** of any kind (No React, Vue, Alpine.js, Svelte, Preact, Lit, etc.).
-  - Must use modern, standards-compliant ES6+ Vanilla JS (`const`/`let`, arrow functions, template literals, `async/await`, `fetch`, `EventTarget` or clean pure-JS state management).
+  - Must use modern, standards-compliant ES6+ Vanilla JS (`const`/`let`, arrow functions, template literals, `async/await`, `fetch`, clean pure-JS state management).
   - DOM manipulation must be executed cleanly using native DOM methods (`querySelector`, `innerHTML`, `createElement`, or template literal rendering with event delegation).
 - **Allowed CDN Libraries**:
   - Tailwind CSS via CDN (`https://cdn.tailwindcss.com`).
-  - Code syntax highlighting via CDN (e.g., PrismJS or Highlight.js script and stylesheet for highlighting the generated code and JSON responses).
-  - Optional icon library via CDN (e.g., Lucide Icons or inline SVGs).
-  - YAML parser via CDN (`js-yaml`, e.g. `https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js`) to parse OpenAPI/Swagger YAML specifications in the browser.
-- **No Build Tools**: Runs directly by opening `index.html` in any modern web browser.
+  - Code syntax highlighting via CDN (Highlight.js script and stylesheet for highlighting generated code and JSON responses, with offline highlight fallback).
+  - Lucide Icons via CDN.
+  - YAML parser via CDN (`js-yaml` `4.1.0`) to parse OpenAPI/Swagger YAML specifications in the browser.
+- **No Runtime Build Tools**: Runs directly by opening `src/index.html` or `build/index.html` in any modern web browser. `build.sh` (compatible with macOS Bash 3.2 and Linux) handles static spec/theme/flag injection.
 
 ---
 
 ### 2. Architecture & State Management (Vanilla JS)
 
-Structure the client-side JavaScript cleanly using a predictable, single-state pattern:
-1. **Central State Object**: Maintain application state in a single object (e.g., `const state = { spec: null, selectedEndpoint: null, filterText: '', activeResponseCode: null, activeMobileTab: 'docs' };`).
-2. **State Updates & Render Pipeline**: Mutate state through dedicated functions and trigger targeted re-renders (e.g., `renderSidebar()`, `renderDetails()`, `renderCodeSnippet()`) to avoid unnecessary full-page DOM destruction.
-3. **Event Delegation**: Attach event listeners efficiently to parent containers where appropriate.
+Structure client-side JavaScript using a predictable, single-state pattern:
+1. **Central State Object (`state`)**: Maintains `rawSpec`, `parsedSpec`, `selectedPageId`, `selectedEndpointId`, `filterText`, `selectedTag`, `activeResponseCode`, `activeResponseExampleKey`, `activeRequestBodyTab`, `activeRequestBodyExampleKey`, `activeRightTab` (`'code' | 'try'`), `activeMobileTab` (`'docs' | 'code'`), `selectedCodeLang` (`'curl' | 'javascript' | 'php' | 'golang'`), `sidebarCollapsed`, `codePanelCollapsed`, `codePanelFullscreen`, `darkMode`, `variables`, `liveServerUrl`, `liveParamValues`, `liveBodyText`, `endpointSessionState` (per-endpoint draft persistence across navigation), `liveResponseView` (`'json' | 'table'`), `liveResponseFilter`, `liveResponseSortCol`, `liveResponseSortDir`, `liveResponseTableStack` (nested table drill-down stack), and `tryRequestState`.
+2. **State Updates & Render Pipeline**: Mutate state through dedicated actions and trigger targeted re-renders (`renderSidebar()`, `renderDocumentation()`, `renderCodePanel()`, `renderInteractiveClient()`, `renderLiveResponseOutput()`, `updateFullscreenUI()`) to avoid unnecessary full-page DOM destruction or input focus loss.
+3. **Event Delegation**: Attach listeners efficiently to parent containers where appropriate (`#code-container`, `#sidebar-container`, `#docs-container`, `#interactive-inputs-container`).
 
 ---
 
-### 3. Layout & Responsive Structure
+### 3. Layout, Panels & Interactive Capabilities
 
-Default layout is a **3-column desktop layout** (`lg:` breakpoint) that gracefully adapts to mobile devices:
+Default layout is a **collapsible 3-column desktop layout** (`lg:` breakpoint) that adapts cleanly to mobile (`< 1024px`) and supports Live Client fullscreen mode:
 
 1. **Top Header**:
-   - API Title & Version indicator.
-   - **Spec Controls**:
-     - Remote URL input with a "Fetch" button to load remote OpenAPI JSON or YAML.
-     - Local file picker (`<input type="file" accept=".json,.yaml,.yml">`) to load a JSON or YAML spec directly from the user's disk via `FileReader`.
-     - "Reset Demo" button to quickly reload a pre-embedded default sample spec (Petstore or similar) so the UI is fully populated on first open.
-     - Error/status banner for invalid JSON/YAML, failed fetches, or CORS errors.
+   - API Title & Version indicator (no `OpenAPI 3.x` / `OAS 3.0` spec type badge).
+   - Dark/Light theme toggle, **Variables** modal, and **Authorize** (`Authorization: Bearer <API_TOKEN>`, masked with eye toggle and persisted to `localStorage`).
+   - **Spec Controls** (conditionally disabled by `DISABLE_LOAD_URL` / `DISABLE_UPLOAD` flags):
+     - Remote URL input + "Fetch" button to load OpenAPI JSON or YAML.
+     - Local file picker (`<input type="file" accept=".json,.yaml,.yml">`) via `FileReader`.
+     - "Reset Demo" button when an embedded spec exists.
+     - Clear error/status feedback for invalid JSON/YAML, failed fetches, or CORS errors.
 
-2. **Left Column (API Navigation - approx. 20-25% width)**:
-   - Sticky full-height scrollable sidebar.
-   - Search input that filters paths, tags, and methods in real-time (`input` event).
-   - Endpoints grouped cleanly by OpenAPI `tags`.
-   - Method badges with distinct styling:
-     - `GET` (emerald/blue)
-     - `POST` (indigo/green)
-     - `PUT`/`PATCH` (amber/yellow)
-     - `DELETE` (rose/red)
-   - Visually highlighted active/selected item.
+2. **Left Column (Navigation Sidebar - collapsible on desktop)**:
+   - Collapsible via `#btn-toggle-sidebar` (inside sidebar) and restorable via docked `#btn-expand-sidebar`.
+   - Real-time search input filtering endpoints and custom pages, plus tag filtering.
+   - Custom documentation pages via root/info `x-pages` (**Overview & Guides**) and path-level `x-page` / `x-pages` rendered directly before that path's endpoints.
+   - Endpoints grouped cleanly by OpenAPI `tags` with distinct method badges (`GET`, `POST`, `PUT`/`PATCH`, `DELETE`).
 
-3. **Middle Column (API Documentation & Payload - approx. 45-50% width)**:
-   - Method badge, full path URL, summary, and markdown/plain text description.
-   - **Parameters Section**: Clean table displaying query, path, and header parameters (Name, In, Type, Required badge, Description).
-   - **Request Body Section**:
-     - Content-Type display (`application/json`).
-     - Formatted payload preview / schema showing expected JSON structure and example values.
-   - **Responses Section**:
-     - Status code tabs (e.g., `200`, `400`, `404`, `500`).
-     - Formatted, syntax-highlighted sample JSON response for the active status code tab.
+3. **Middle Column (API Documentation & Custom Pages)**:
+   - **Custom Pages**: Full-width Markdown reader (`renderMarkdown()`) supporting headings, lists, code blocks, blockquotes, and multi-line GFM alerts (`[!NOTE]`, `[!INFO]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`).
+   - **Endpoint Docs**: Method badge, full path, summary, Markdown description, Parameters table, Request Body (`Example` with named `examples` switcher / `Schema`), and Responses (status code tabs with named `examples` switcher and syntax-highlighted JSON).
 
-4. **Right Column (JavaScript Code Example - approx. 30% width)**:
-   - Sticky dark-mode terminal/card view.
-   - **JavaScript Only**: Dynamically generates modern, ready-to-run JavaScript `fetch()` / `async/await` code to call the selected endpoint.
-   - Dynamically includes:
-     - The target URL (interpolating path parameters or base URL).
-     - HTTP method (`GET`, `POST`, etc.).
-     - Headers (e.g., `Content-Type: application/json`, `Accept: application/json`).
-     - Formatted `body: JSON.stringify(...)` if the endpoint accepts a payload.
-   - "Copy Code" button with temporary visual confirmation ("Copied!").
+4. **Right Column (Code Examples & Interactive Live Client - collapsible & fullscreen)**:
+   - Collapsible on desktop via `#btn-toggle-code-panel` and restorable via docked `#btn-expand-code-panel`.
+   - **Fullscreen Toggle** (`#btn-fullscreen-code-panel` and `Esc`, single toggle button without redundant exit buttons):
+     - When enabled, automatically hides `#sidebar-container` and `#docs-container` and expands `#code-container` to fill the viewport.
+     - In Live Client (`Try It`) fullscreen mode with a visible response, uses a side-by-side split where the **response container is wider than the request form** (`#live-client-request-card` at `lg:w-[36%] xl:w-[34%]`, `#interactive-response-container` taking remaining `lg:flex-1`).
+   - **Code Examples Tab (`code`)**:
+     - Multi-language ready-to-run snippets for **cURL**, **JavaScript (Fetch)**, **PHP**, and **Golang**, updated live from server URL, variables, authorization token, and Live Client inputs, with one-click copy.
+   - **Live Client Tab (`try`)**:
+     - Editable **Server URL** override and masked **Authorization Bearer** field with eye toggle.
+     - Parameter inputs (initialized empty unless `example`, `default`, or `enum` is defined) and JSON Request Body editor with example picker using smart 3-way payload merge (`mergePayloadAttributes()`) plus per-endpoint session draft persistence (`endpointSessionState`).
+     - **Live Response Viewer**:
+       - `JSON | Table` view switcher (`#try-response-view-switcher`) for object/array responses.
+       - **JSON View**: Syntax-highlighted response body + copy.
+       - **Table View**: Extracts arrays of objects, wrapped arrays (`data`/`items`/`results`/etc. with sibling metadata chips), or single objects (`Key | Value`) with dot-notation flattening; supports real-time row filtering, 3-state column sorting (`asc` -> `desc` -> default, nulls/undefined last), CSV export of filtered/sorted rows, click-to-copy scalar cells, and **nested data drill-down**: clicking a nested object/array cell (`[N items]` / `{N keys}`) renders that nested value as a table with breadcrumb navigation (`Main Table / ...`) and a **Close** button (`#btn-close-nested-table`) that returns to the main table while restoring its previous filter and sort state.
 
 5. **Mobile Responsiveness (`< 1024px`)**:
-   - Header collapses cleanly.
-   - Navigation becomes a slide-out drawer or collapsible toggle.
-   - Middle and Right columns stack or toggle between "Docs" and "Code" via a mobile tab bar.
+   - Slide-out navigation drawer (`mobileNavOpen`).
+   - Docs / Code-Client tab switcher (`activeMobileTab`).
 
 ---
 
 ### 4. Spec Ingestion & Standalone Build (`build.sh`)
 
-- Support both **OpenAPI 3.x** and **Swagger 2.0** specifications in **JSON and YAML** formats.
-- Include a simple internal dereferencing helper or fallback resolver for `$ref` schemas (e.g., resolving `#/definitions/...` or `#/components/schemas/...`).
-- `build.sh` treats `--spec-file <path>` as **optional**:
-  - When `--spec-file` is provided (JSON or YAML), validate/convert it and inject it into `EMBEDDED_OPENAPI_SPEC` so the generated `index.html` works immediately offline.
-  - When `--spec-file` is omitted, leave `EMBEDDED_OPENAPI_SPEC = null` to build a standalone generic viewer that boots into the empty/welcome state ready for local file upload or remote URL loading.
-  - Reject building without `--spec-file` when both `--disable-upload` and `--disable-load-url` are set, as the resulting viewer would have no way to load any specification.
+- Support both **OpenAPI 3.x** and **Swagger 2.0** specifications in **JSON and YAML** formats, with internal `$ref` resolution (`#/definitions/...`, `#/components/schemas/...`).
+- `build.sh` treats `--spec-file <path>` as optional (unless both `--disable-upload` and `--disable-load-url` are set):
+  - Converts YAML specs (`.yaml`/`.yml` or non-JSON content) using fallback chain `python3` (`PyYAML`) -> `ruby` (`Psych`) -> `yq` -> `node`.
+  - Supports `--theme <name>`, `--server-url <url>`, `--minify`, `--disable-upload`, `--disable-load-url`.
 
 ---
 
 ### 5. Implementation Constraints
 
-- Produce the **entire, complete `index.html`** file from `<!DOCTYPE html>` to `</html>`.
-- **Do not use placeholders**, ellipsis (`...`), or `// TODO` comments. Every function must be fully implemented and working.
-- Clean, minimalist aesthetic (neutral slate/zinc tones, refined borders, subtle hover effects).
+- Maintain complete, self-contained HTML files without placeholders, ellipsis (`...`), or `// TODO` comments.
+- Escape untrusted/spec values safely when rendering HTML (`escapeHtml()`).
+- Keep clean, minimalist slate/zinc aesthetic across light and dark modes.

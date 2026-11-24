@@ -4,6 +4,7 @@
   - Added `JSON | Table` view switcher (`#try-response-view-switcher`) in the Live Response header, persisted via `state.liveResponseView`.
   - Implemented `extractTableDataset()` supporting arrays of objects, wrapped REST responses (auto-detecting `data`/`items`/`results`/etc. with sibling metadata chips), and single objects (2-column `Key | Value`) with dot-notation flattening up to 2 levels.
   - Added row filtering (`#try-response-table-filter`), 3-state column sorting (`asc` -> `desc` -> default via `sortTableRows()` with `null`/`undefined` always last), sorted/filtered CSV copy (`#btn-copy-resp-csv`), click-to-copy cell values, XSS HTML escaping, and fullscreen height adaptation (`lg:max-h-[calc(100vh-17rem)]`).
+  - Added multi-level nested data drill-down via `state.liveResponseTableStack`, `openNestedTable()`, `closeNestedTable()`, and `buildNestedHeaderBarHtml()`: clicking any nested object/array badge (`[N items]` / `{N keys}`, `.try-table-nested-btn` / `[data-nested-idx]`) renders that item as a table with breadcrumbs (`.try-table-breadcrumb-btn`) and a **Close** button (`#btn-close-nested-table`) that restores the main table along with its filter and sort state.
 
 - **Live Client Fullscreen Toggle (`src/index.html`)**:
   - Added `toggleCodePanelFullscreen()` and `updateFullscreenUI()` controlled by `#btn-fullscreen-code-panel` (panel header) and `Esc`.

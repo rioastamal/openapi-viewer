@@ -1,5 +1,8 @@
 # User Preferences & Reusable Knowledge
 
+- **Keeping `.agents/CONTEXT.md` Up to Date**:
+  - Whenever fundamental changes are requested (architecture, state structure, layout, panel behavior, Live Client features, or build pipeline), always update `.agents/CONTEXT.md` immediately alongside the code changes—do not only update `.agents/SUMMARY.md`.
+
 - **Commit Message Style**:
   - When asked to draft a git commit message, only provide the message itself (no command or extra explanation).
   - Always keep it super short and concise.

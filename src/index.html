@@ -2027,6 +2027,7 @@
       liveResponseFilter: '',
       liveResponseSortCol: null,
       liveResponseSortDir: null,       // null | 'asc' | 'desc'
+      liveResponseTableStack: [],
       tryRequestState: {
         loading: false,
         statusCode: null,
@@ -2197,6 +2198,7 @@
       state.liveResponseFilter = '';
       state.liveResponseSortCol = null;
       state.liveResponseSortDir = null;
+      state.liveResponseTableStack = [];
       state.tryRequestState = {
         loading: false,
         statusCode: null,
@@ -3820,7 +3822,52 @@
       return String(val);
     }
 
-    function formatTableCellHtml(val) {
+    let currentTableNestedValues = [];
+
+    function getActiveTableBody() {
+      const stack = state.liveResponseTableStack || [];
+      if (stack.length > 0) {
+        return stack[stack.length - 1].data;
+      }
+      return state.tryRequestState?.body;
+    }
+
+    function openNestedTable(nestedIdx) {
+      const entry = currentTableNestedValues[nestedIdx];
+      if (!entry) return;
+      state.liveResponseTableStack.push({
+        label: entry.col,
+        data: entry.val,
+        prevFilter: state.liveResponseFilter,
+        prevSortCol: state.liveResponseSortCol,
+        prevSortDir: state.liveResponseSortDir
+      });
+      state.liveResponseFilter = '';
+      state.liveResponseSortCol = null;
+      state.liveResponseSortDir = null;
+      renderLiveResponseOutput();
+    }
+
+    function closeNestedTable(targetDepth = 0) {
+      const stack = state.liveResponseTableStack || [];
+      if (stack.length === 0) return;
+      if (targetDepth <= 0) {
+        const rootSaved = stack[0];
+        state.liveResponseFilter = rootSaved.prevFilter || '';
+        state.liveResponseSortCol = rootSaved.prevSortCol || null;
+        state.liveResponseSortDir = rootSaved.prevSortDir || null;
+        state.liveResponseTableStack = [];
+      } else if (targetDepth < stack.length) {
+        const restored = stack[targetDepth];
+        state.liveResponseFilter = restored.prevFilter || '';
+        state.liveResponseSortCol = restored.prevSortCol || null;
+        state.liveResponseSortDir = restored.prevSortDir || null;
+        state.liveResponseTableStack = stack.slice(0, targetDepth);
+      }
+      renderLiveResponseOutput();
+    }
+
+    function formatTableCellHtml(val, nestedIdx = null) {
       if (val === undefined) {
         return '<span class="text-slate-600 italic">—</span>';
       }
@@ -3842,7 +3889,8 @@
         const badge = Array.isArray(val)
           ? `[${val.length} items]`
           : `{${Object.keys(val).length} keys}`;
-        return `<span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-blue-300 border border-slate-700" title="${escapeHtml(shortPreview)}">${escapeHtml(badge)}</span>`;
+        const idxAttr = nestedIdx !== null ? `data-nested-idx="${nestedIdx}"` : '';
+        return `<button type="button" ${idxAttr} class="try-table-nested-btn inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-blue-950/70 hover:bg-blue-900/80 text-blue-300 hover:text-white border border-blue-800/80 transition cursor-pointer" title="Open nested table: ${escapeHtml(shortPreview)}"><span>${escapeHtml(badge)}</span><span class="text-blue-400">↗</span></button>`;
       }
       const str = String(val);
       const isUrl = /^https?:\/\//i.test(str);
@@ -3915,15 +3963,30 @@
     }
 
     function buildTableRowsHtml(rows, columns) {
+      currentTableNestedValues = [];
       if (rows.length === 0) {
         return `<tr><td colspan="${Math.max(columns.length, 1)}" class="px-3 py-6 text-center text-xs text-slate-500 italic">No matching rows</td></tr>`;
       }
+      const isKvTable = columns.length === 2 && columns[0] === 'Key';
       return rows.map((row, rIdx) => {
         const cells = columns.map((col, cIdx) => {
           const val = row[col];
+          const isNestedObj = val !== null && typeof val === 'object';
+          let nestedIdx = null;
+          let nestedLabel = col;
+          if (isNestedObj) {
+            if (isKvTable && row.Key) {
+              nestedLabel = String(row.Key);
+            }
+            nestedIdx = currentTableNestedValues.length;
+            currentTableNestedValues.push({ col: nestedLabel, val });
+          }
           const copyRaw = formatCellCopyValue(val);
-          const isKeyCol = columns.length === 2 && columns[0] === 'Key' && cIdx === 0;
+          const isKeyCol = isKvTable && cIdx === 0;
           const cellTextCls = isKeyCol ? 'font-mono text-emerald-300 whitespace-nowrap' : 'max-w-[260px]';
+          if (isNestedObj) {
+            return `<td class="try-table-cell px-2.5 py-1.5 border-b border-slate-800/80 align-top ${cellTextCls} cursor-pointer hover:bg-slate-800/80 transition-colors" data-nested-idx="${nestedIdx}" title="Click to view nested data as table">${formatTableCellHtml(val, nestedIdx)}</td>`;
+          }
           return `<td class="try-table-cell px-2.5 py-1.5 border-b border-slate-800/80 align-top ${cellTextCls} cursor-pointer hover:bg-slate-800/80 transition-colors" data-copy-value="${escapeHtml(copyRaw)}" title="Click to copy value">${formatTableCellHtml(val)}</td>`;
         }).join('');
         return `<tr class="${rIdx % 2 === 1 ? 'bg-slate-900/40' : 'bg-slate-950/40'} hover:bg-slate-800/50 transition-colors">${cells}</tr>`;
@@ -3942,13 +4005,45 @@
       return [header, ...lines].join('\n');
     }
 
+    function buildNestedHeaderBarHtml() {
+      const stack = state.liveResponseTableStack || [];
+      if (stack.length === 0) return '';
+      const crumbs = [
+        `<button type="button" class="try-table-breadcrumb-btn text-blue-400 hover:text-blue-300 hover:underline font-medium" data-stack-depth="0">Main Table</button>`
+      ];
+      stack.forEach((item, idx) => {
+        const depth = idx + 1;
+        const isLast = idx === stack.length - 1;
+        if (isLast) {
+          crumbs.push(`<span class="text-slate-600">/</span><span class="font-mono text-slate-200 font-semibold truncate max-w-[180px]">${escapeHtml(item.label)}</span>`);
+        } else {
+          crumbs.push(`<span class="text-slate-600">/</span><button type="button" class="try-table-breadcrumb-btn font-mono text-blue-400 hover:text-blue-300 hover:underline truncate max-w-[150px]" data-stack-depth="${depth}">${escapeHtml(item.label)}</button>`);
+        }
+      });
+      return `
+        <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-blue-950/40 border border-blue-900/60 text-[11px]">
+          <div class="flex items-center gap-1.5 min-w-0 overflow-x-auto">
+            <span class="text-[10px] uppercase tracking-wider font-semibold text-blue-300 flex-shrink-0">Nested</span>
+            <span class="text-slate-600 flex-shrink-0">|</span>
+            ${crumbs.join(' ')}
+          </div>
+          <button type="button" id="btn-close-nested-table" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-[11px] font-medium flex-shrink-0 transition" title="Close nested table and return to main table">
+            <i data-lucide="x" class="w-3 h-3"></i>
+            <span>Close</span>
+          </button>
+        </div>
+      `;
+    }
+
     function renderLiveResponseTable(body) {
       const tableWrap = document.getElementById('try-response-table-wrap');
       if (!tableWrap) return;
 
+      const nestedBarHtml = buildNestedHeaderBarHtml();
       const dataset = extractTableDataset(body);
       if (dataset.mode === 'unsupported') {
         tableWrap.innerHTML = `
+          ${nestedBarHtml}
           <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400 italic">
             ${escapeHtml(dataset.reason)}
           </div>
@@ -3967,6 +4062,7 @@
 
       if (dataset.mode === 'empty') {
         tableWrap.innerHTML = `
+          ${nestedBarHtml}
           ${metaHtml}
           <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-400 italic">
             Empty array (${escapeHtml(dataset.sourceLabel)}).
@@ -3981,6 +4077,7 @@
       const thHtml = buildTableHeaderHtml(dataset.columns);
 
       tableWrap.innerHTML = `
+        ${nestedBarHtml}
         ${metaHtml}
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <div class="relative flex-1 min-w-[140px]">
@@ -4078,7 +4175,7 @@
           if (isTableSupported && state.liveResponseView === 'table') {
             if (jsonWrap) jsonWrap.classList.add('hidden');
             if (tableWrap) tableWrap.classList.remove('hidden');
-            renderLiveResponseTable(resState.body);
+            renderLiveResponseTable(getActiveTableBody());
           } else {
             if (jsonWrap) jsonWrap.classList.remove('hidden');
             if (tableWrap) tableWrap.classList.add('hidden');
@@ -4104,6 +4201,7 @@
       state.liveResponseFilter = '';
       state.liveResponseSortCol = null;
       state.liveResponseSortDir = null;
+      state.liveResponseTableStack = [];
       state.tryRequestState = {
         loading: true,
         statusCode: null,
@@ -4566,6 +4664,27 @@
             return;
           }
 
+          if (e.target.closest('#btn-close-nested-table')) {
+            closeNestedTable(0);
+            return;
+          }
+
+          const crumbBtn = e.target.closest('.try-table-breadcrumb-btn');
+          if (crumbBtn) {
+            const depth = parseInt(crumbBtn.getAttribute('data-stack-depth') || '0', 10);
+            closeNestedTable(isNaN(depth) ? 0 : depth);
+            return;
+          }
+
+          const nestedTrigger = e.target.closest('[data-nested-idx]');
+          if (nestedTrigger) {
+            const idx = parseInt(nestedTrigger.getAttribute('data-nested-idx'), 10);
+            if (!isNaN(idx)) {
+              openNestedTable(idx);
+            }
+            return;
+          }
+
           const sortTh = e.target.closest('.try-table-sort-th');
           if (sortTh) {
             const col = sortTh.getAttribute('data-sort-col');
@@ -4579,7 +4698,7 @@
                 state.liveResponseSortCol = null;
                 state.liveResponseSortDir = null;
               }
-              const body = state.tryRequestState?.body;
+              const body = getActiveTableBody();
               if (body && typeof body === 'object') {
                 const dataset = extractTableDataset(body);
                 if (dataset.rows && dataset.columns) {
@@ -4595,7 +4714,7 @@
           }
 
           if (e.target.closest('#btn-copy-resp-csv')) {
-            const body = state.tryRequestState?.body;
+            const body = getActiveTableBody();
             if (body && typeof body === 'object') {
               const dataset = extractTableDataset(body);
               if (dataset.rows && dataset.columns) {
@@ -4629,7 +4748,7 @@
         codeContainer.addEventListener('input', (e) => {
           if (e.target.id === 'try-response-table-filter') {
             state.liveResponseFilter = e.target.value;
-            const body = state.tryRequestState?.body;
+            const body = getActiveTableBody();
             if (body && typeof body === 'object') {
               const dataset = extractTableDataset(body);
               const visible = getFilteredAndSortedRows(dataset);

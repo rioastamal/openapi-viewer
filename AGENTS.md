@@ -10,6 +10,7 @@
 
 * **Always read `.agents/CONTEXT.md`** before starting work if the file exists and has not already been read in the current session.
 * **Always read `.agents/MEMORY.md`** before starting work if the file exists and has not already been read in the current session.
+* **Always keep `.agents/CONTEXT.md` up to date**: Whenever fundamental changes are requested to architecture, state, layout, UI behavior, core workflows, or build/technical constraints, update `.agents/CONTEXT.md` immediately alongside the implementation (in addition to `.agents/SUMMARY.md`).
 
 ## Implementation Summary
 
