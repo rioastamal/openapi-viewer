@@ -1,5 +1,15 @@
 # Implementation Summary
 
+- **Live Response Table View (`src/index.html`)**:
+  - Added `JSON | Table` view switcher (`#try-response-view-switcher`) in the Live Response header, persisted via `state.liveResponseView`.
+  - Implemented `extractTableDataset()` supporting arrays of objects, wrapped REST responses (auto-detecting `data`/`items`/`results`/etc. with sibling metadata chips), and single objects (2-column `Key | Value`) with dot-notation flattening up to 2 levels.
+  - Added row filtering (`#try-response-table-filter`), 3-state column sorting (`asc` -> `desc` -> default via `sortTableRows()` with `null`/`undefined` always last), sorted/filtered CSV copy (`#btn-copy-resp-csv`), click-to-copy cell values, XSS HTML escaping, and fullscreen height adaptation (`lg:max-h-[calc(100vh-17rem)]`).
+
+- **Live Client Fullscreen Toggle (`src/index.html`)**:
+  - Added `toggleCodePanelFullscreen()` and `updateFullscreenUI()` controlled by `#btn-fullscreen-code-panel` (panel header) and `Esc`.
+  - When enabled on desktop, automatically hides `#sidebar-container` and `#docs-container`, expands `#code-container` (`flex-1 w-full`), displays the active endpoint badge (`#live-client-endpoint-badge`), and switches Live Client request/response to a side-by-side layout where the response panel (`lg:flex-1`, ~64-66%) is wider than the request form (`lg:w-[36%] xl:w-[34%]`).
+  - Restores previous `sidebarCollapsed` and `codePanelCollapsed` states on exit, and exits fullscreen automatically when collapsing the panel or opening a custom page.
+
 - **Client-Side YAML Parser in Viewer (`src/index.html`)**:
   - Added `js-yaml` (`4.1.0`) CDN in [src/index.html](file:///Users/rioastamal/Projects/openapi-swagger-viewer/src/index.html) and updated local upload (`accept=".json,.yaml,.yml"`) and remote URL fetch handlers to use `parseSpecText()`.
   - Added `normalizeParsedSpec()` (converts YAML `Date` objects to ISO strings and stringifies non-string keys) and hardened `parseOpenApiSpec()` to accept numeric YAML `openapi`/`swagger` versions (e.g. unquoted `swagger: 2.0`).
