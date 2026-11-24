@@ -70,6 +70,9 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- js-yaml CDN (for client-side YAML OpenAPI/Swagger parsing) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
   <style>
     /* Custom sleek scrollbars */
     ::-webkit-scrollbar {
@@ -177,7 +180,7 @@
           <input 
             type="url" 
             id="input-spec-url" 
-            placeholder="Remote OpenAPI JSON URL..." 
+            placeholder="Remote OpenAPI JSON/YAML URL..." 
             class="bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none w-48 lg:w-64 px-1.5"
             required
           >
@@ -194,11 +197,11 @@
 
         <!-- __COMPONENT_UPLOAD_START__ -->
         <!-- File Upload Button -->
-        <label for="spec-file-input" class="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer flex-shrink-0" title="Load local OpenAPI or Swagger JSON file">
+        <label for="spec-file-input" class="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition shadow-sm cursor-pointer flex-shrink-0" title="Load local OpenAPI or Swagger JSON/YAML file">
           <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">Upload JSON</span>
+          <span class="hidden sm:inline">Upload Spec</span>
         </label>
-        <input type="file" id="spec-file-input" accept=".json" class="hidden">
+        <input type="file" id="spec-file-input" accept=".json,.yaml,.yml" class="hidden">
         <!-- __COMPONENT_UPLOAD_END__ -->
 
         <!-- Variables Button -->
@@ -778,13 +781,108 @@
      * 3. SPEC INGESTION & NORMALIZATION PIPELINE (OPENAPI 3.X & SWAGGER 2.0)
      * ============================================================================
      */
-    function parseOpenApiSpec(raw) {
-      if (!raw || typeof raw !== 'object') {
-        throw new Error("Invalid specification: expected a JSON object");
+    /**
+     * Normalize parsed YAML/JSON values (e.g. convert YAML Date instances to ISO strings,
+     * and coerce non-string object keys cleanly).
+     */
+    function normalizeParsedSpec(val) {
+      if (val instanceof Date) {
+        const isMidnightUtc =
+          val.getUTCHours() === 0 &&
+          val.getUTCMinutes() === 0 &&
+          val.getUTCSeconds() === 0 &&
+          val.getUTCMilliseconds() === 0;
+        return isMidnightUtc ? val.toISOString().slice(0, 10) : val.toISOString();
+      }
+      if (Array.isArray(val)) {
+        return val.map(normalizeParsedSpec);
+      }
+      if (val && typeof val === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(val)) {
+          out[String(k)] = normalizeParsedSpec(v);
+        }
+        return out;
+      }
+      return val;
+    }
+
+    /**
+     * Parse raw specification text in JSON or YAML format into a normalized JS object.
+     */
+    function parseSpecText(rawText, sourceName = '') {
+      if (!rawText || typeof rawText !== 'string' || !rawText.trim()) {
+        throw new Error('Specification file is empty');
       }
 
-      const isOpenApi3 = !!(raw.openapi && raw.openapi.startsWith('3.'));
-      const isSwagger2 = !!(raw.swagger && raw.swagger.startsWith('2.'));
+      const cleanSource = String(sourceName || '').split('?')[0].split('#')[0].toLowerCase();
+      const trimmed = rawText.trim();
+      const isExplicitJson = cleanSource.endsWith('.json');
+      const isExplicitYaml = cleanSource.endsWith('.yaml') || cleanSource.endsWith('.yml');
+
+      let parsed = null;
+
+      if (isExplicitJson || (!isExplicitYaml && (trimmed.startsWith('{') || trimmed.startsWith('[')))) {
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (jsonErr) {
+          if (isExplicitJson) {
+            throw new Error(`Invalid JSON: ${jsonErr.message}`);
+          }
+          // Unknown extension: fallback to YAML if JSON.parse failed
+          parsed = undefined;
+        }
+      }
+
+      if (parsed === undefined || parsed === null) {
+        if (isExplicitJson) {
+          throw new Error('Invalid JSON: expected a JSON object');
+        }
+        if (typeof window.jsyaml === 'undefined' || typeof window.jsyaml.loadAll !== 'function') {
+          throw new Error('YAML parser (js-yaml) is not loaded. Check your network connection or use JSON format.');
+        }
+
+        const docs = [];
+        try {
+          window.jsyaml.loadAll(rawText, (doc) => {
+            docs.push(doc);
+          });
+        } catch (yamlErr) {
+          throw new Error(`Invalid YAML: ${yamlErr.message}`);
+        }
+
+        if (docs.length === 0 || (docs.length === 1 && (docs[0] === null || docs[0] === undefined))) {
+          throw new Error('YAML file contains no specification data');
+        }
+        if (docs.length > 1) {
+          throw new Error('Multiple YAML documents found; expected a single OpenAPI/Swagger document');
+        }
+
+        parsed = normalizeParsedSpec(docs[0]);
+      }
+
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Invalid specification: root element must be a JSON or YAML object');
+      }
+
+      for (const verKey of ['openapi', 'swagger']) {
+        if (typeof parsed[verKey] === 'number') {
+          parsed[verKey] = String(parsed[verKey]);
+        }
+      }
+
+      return parsed;
+    }
+
+    function parseOpenApiSpec(raw) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        throw new Error("Invalid specification: expected a JSON or YAML object");
+      }
+
+      const openapiVer = raw.openapi !== undefined && raw.openapi !== null ? String(raw.openapi) : '';
+      const swaggerVer = raw.swagger !== undefined && raw.swagger !== null ? String(raw.swagger) : '';
+      const isOpenApi3 = /^3(\.|$)/.test(openapiVer);
+      const isSwagger2 = /^2(\.|$)/.test(swaggerVer);
 
       if (!isOpenApi3 && !isSwagger2) {
         throw new Error("Unsupported format: document must specify 'openapi: 3.x' or 'swagger: 2.0'");
@@ -793,7 +891,7 @@
       // Metadata
       const info = {
         title: raw.info?.title || "OpenAPI Specification",
-        version: raw.info?.version || "1.0.0",
+        version: raw.info?.version !== undefined && raw.info?.version !== null ? String(raw.info.version) : "1.0.0",
         description: raw.info?.description || "",
         termsOfService: raw.info?.termsOfService || "",
         contact: raw.info?.contact || null,
@@ -1947,7 +2045,7 @@
       } catch (err) {
         console.error("Failed to load specification:", err);
         showAlert(`Specification Error: ${err.message}`);
-        showToast("Failed to parse OpenAPI JSON", "error");
+        showToast("Failed to parse OpenAPI specification", "error");
       }
     }
 
@@ -3637,13 +3735,13 @@
             </div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">No Specification Loaded</h2>
             <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
-              This viewer is ready for your API. Load a specification using the toolbar above, or inject your OpenAPI JSON using <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-xs">build.sh</code>.
+              This viewer is ready for your API. Load a JSON or YAML specification using the toolbar above, or inject it using <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-mono text-xs">build.sh</code>.
             </p>
             <!-- __COMPONENT_UPLOAD_START__ -->
             <div class="flex flex-wrap items-center justify-center gap-3">
               <label for="spec-file-input" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm cursor-pointer">
                 <i data-lucide="upload" class="w-4 h-4"></i>
-                <span>Upload JSON Spec</span>
+                <span>Upload JSON / YAML Spec</span>
               </label>
             </div>
             <!-- __COMPONENT_UPLOAD_END__ -->
@@ -3718,7 +3816,7 @@
           const url = (urlInput.value || '').trim();
           if (!url) return;
 
-          showToast('Fetching remote OpenAPI JSON...', 'info');
+          showToast('Fetching remote OpenAPI specification...', 'info');
           const fetchBtn = document.getElementById('btn-fetch-spec');
           const originalText = fetchBtn.innerHTML;
           fetchBtn.innerHTML = `<span>Loading...</span>`;
@@ -3727,12 +3825,13 @@
           try {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            const data = await res.json();
+            const text = await res.text();
+            const data = parseSpecText(text, url);
             setSpec(data);
           } catch (err) {
             console.error(err);
-            showAlert(`Failed to fetch from ${url}. Reason: ${err.message}. If this is a cross-origin server, make sure CORS is enabled.`);
-            showToast('Fetch failed: CORS or network error', 'error');
+            showAlert(`Failed to load from ${url}. Reason: ${err.message}. If this is a cross-origin server, make sure CORS is enabled.`);
+            showToast('Failed to fetch or parse specification', 'error');
           } finally {
             fetchBtn.innerHTML = originalText;
             fetchBtn.disabled = false;
@@ -3752,12 +3851,13 @@
           const reader = new FileReader();
           reader.onload = (event) => {
             try {
-              const parsed = JSON.parse(event.target.result);
+              const parsed = parseSpecText(event.target.result, file.name);
               setSpec(parsed);
               fileInput.value = ''; // Reset file input
-            } catch (jsonErr) {
-              showAlert(`Invalid JSON File: ${jsonErr.message}`);
-              showToast('Invalid JSON file format', 'error');
+            } catch (parseErr) {
+              showAlert(`Invalid Specification File: ${parseErr.message}`);
+              showToast('Invalid JSON/YAML file format', 'error');
+              fileInput.value = ''; // Reset file input so user can re-select fixed file
             }
           };
           reader.onerror = () => {

@@ -6,6 +6,7 @@
 # viewer template.
 #
 # Usage:
+#   bash build.sh
 #   bash build.sh --spec-file /path/to/spec.json
 #   bash build.sh --spec-file /path/to/spec.yaml
 #   bash build.sh --spec-file spec.yaml --output dist/index.html
@@ -17,14 +18,14 @@
 set -euo pipefail
 
 # ANSI Color Codes
-C_RESET='\033[0m'
-C_BOLD='\033[1m'
-C_RED='\033[31m'
-C_GREEN='\033[32m'
-C_YELLOW='\033[33m'
-C_BLUE='\033[34m'
-C_CYAN='\033[36m'
-C_GRAY='\033[90m'
+C_RESET=$'\033[0m'
+C_BOLD=$'\033[1m'
+C_RED=$'\033[31m'
+C_GREEN=$'\033[32m'
+C_YELLOW=$'\033[33m'
+C_BLUE=$'\033[34m'
+C_CYAN=$'\033[36m'
+C_GRAY=$'\033[90m'
 
 # Disable colors if stdout is not a TTY or NO_COLOR is set
 if [ ! -t 1 ] || [ "${NO_COLOR:-}" != "" ]; then
@@ -59,11 +60,11 @@ print_usage() {
 ${C_BOLD}OpenAPI / Swagger Viewer Build Script${C_RESET}
 
 ${C_CYAN}Usage:${C_RESET}
-  bash build.sh --spec-file <path-to-json-or-yaml> [options]
-  ./build.sh -s <path-to-json-or-yaml> [-o <output-path>]
+  bash build.sh [--spec-file <path-to-json-or-yaml>] [options]
+  ./build.sh [-s <path-to-json-or-yaml>] [-o <output-path>]
 
 ${C_CYAN}Options:${C_RESET}
-  -s, --spec-file <path>    Path to OpenAPI/Swagger JSON or YAML specification file (Required)
+  -s, --spec-file <path>    Path to OpenAPI/Swagger JSON or YAML specification file (Optional)
   -o, --output <path>       Output standalone HTML file path (Default: build/index.html)
   -t, --template <path>     Viewer HTML template file path (Default: src/index.html)
       --theme <name|path>   Theme name or CSS file path (Default: default)
@@ -74,6 +75,7 @@ ${C_CYAN}Options:${C_RESET}
   -h, --help                Show this help message and exit
 
 ${C_CYAN}Examples:${C_RESET}
+  bash build.sh --output dist/viewer.html
   bash build.sh --spec-file examples/petstore.json
   bash build.sh --spec-file examples/petstore.yaml
   bash build.sh --spec-file spec.yaml --theme default --minify
@@ -176,10 +178,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Step 1: Validate required parameters
-if [ -z "$SPEC_FILE" ]; then
-  log_error "--spec-file is required."
-  print_usage
+# Step 1: Validate parameter combinations
+if [ -z "$SPEC_FILE" ] && [ "$DISABLE_LOAD_URL" = true ] && [ "$DISABLE_UPLOAD" = true ]; then
+  log_error "Cannot omit --spec-file when both --disable-load-url and --disable-upload are set."
+  log_error "Provide --spec-file or keep at least one spec loading method enabled."
   exit 1
 fi
 
@@ -189,15 +191,17 @@ if [ ! -f "$TEMPLATE_FILE" ]; then
   exit 1
 fi
 
-# Step 3: Validate spec file existence
-if [ ! -f "$SPEC_FILE" ]; then
-  log_error "Specification file not found: '$SPEC_FILE'"
-  exit 1
-fi
+# Step 3: Validate spec file existence (if provided)
+if [ -n "$SPEC_FILE" ]; then
+  if [ ! -f "$SPEC_FILE" ]; then
+    log_error "Specification file not found: '$SPEC_FILE'"
+    exit 1
+  fi
 
-if [ ! -s "$SPEC_FILE" ]; then
-  log_error "Specification file is empty: '$SPEC_FILE'"
-  exit 1
+  if [ ! -s "$SPEC_FILE" ]; then
+    log_error "Specification file is empty: '$SPEC_FILE'"
+    exit 1
+  fi
 fi
 
 # Step 4: Resolve and validate theme CSS file
@@ -225,35 +229,36 @@ if [ ! -s "$THEME_FILE" ]; then
   exit 1
 fi
 
-# Step 5: Detect specification format (JSON vs YAML)
-SPEC_FILE_LOWER="$(printf '%s' "$SPEC_FILE" | tr '[:upper:]' '[:lower:]')"
-SPEC_FORMAT=""
-
-case "$SPEC_FILE_LOWER" in
-  *.yaml|*.yml)
-    SPEC_FORMAT="yaml"
-    ;;
-  *.json)
-    SPEC_FORMAT="json"
-    ;;
-  *)
-    # Fallback: inspect first non-whitespace character
-    FIRST_CHAR="$(awk '{
-      for (i = 1; i <= length($0); i++) {
-        ch = substr($0, i, 1)
-        if (ch != " " && ch != "\t" && ch != "\r") {
-          print ch
-          exit
-        }
-      }
-    }' "$SPEC_FILE")"
-    if [ "$FIRST_CHAR" = "{" ] || [ "$FIRST_CHAR" = "[" ]; then
-      SPEC_FORMAT="json"
-    else
+# Step 5: Detect specification format (JSON vs YAML vs none)
+SPEC_FORMAT="none"
+if [ -n "$SPEC_FILE" ]; then
+  SPEC_FILE_LOWER="$(printf '%s' "$SPEC_FILE" | tr '[:upper:]' '[:lower:]')"
+  case "$SPEC_FILE_LOWER" in
+    *.yaml|*.yml)
       SPEC_FORMAT="yaml"
-    fi
-    ;;
-esac
+      ;;
+    *.json)
+      SPEC_FORMAT="json"
+      ;;
+    *)
+      # Fallback: inspect first non-whitespace character
+      FIRST_CHAR="$(awk '{
+        for (i = 1; i <= length($0); i++) {
+          ch = substr($0, i, 1)
+          if (ch != " " && ch != "\t" && ch != "\r") {
+            print ch
+            exit
+          }
+        }
+      }' "$SPEC_FILE")"
+      if [ "$FIRST_CHAR" = "{" ] || [ "$FIRST_CHAR" = "[" ]; then
+        SPEC_FORMAT="json"
+      else
+        SPEC_FORMAT="yaml"
+      fi
+      ;;
+  esac
+fi
 
 # Step 6: Validate template injection markers
 MARKER_START="// __EMBEDDED_SPEC_START__"
@@ -280,8 +285,11 @@ TEMP_THEMED="$(mktemp "${TMPDIR:-/tmp}/viewer_themed.XXXXXX")"
 TEMP_ERR="$(mktemp "${TMPDIR:-/tmp}/spec_err.XXXXXX")"
 trap 'rm -f "$TEMP_SPEC" "$TEMP_BUILD" "$TEMP_FILTERED" "$TEMP_THEMED" "$TEMP_ERR" "${TEMP_SERVER:-}"' EXIT
 
-# Step 8: Validate & prepare JSON stream (JSON or YAML -> JSON)
-if [ "$SPEC_FORMAT" = "json" ]; then
+# Step 8: Validate & prepare JSON stream (JSON, YAML -> JSON, or empty generic viewer)
+if [ "$SPEC_FORMAT" = "none" ]; then
+  log_info "No --spec-file provided; building standalone generic viewer..."
+  printf 'null' > "$TEMP_SPEC"
+elif [ "$SPEC_FORMAT" = "json" ]; then
   log_info "Validating specification JSON: ${C_CYAN}$SPEC_FILE${C_RESET}"
   IS_VALID_JSON=false
 
@@ -675,7 +683,11 @@ fi
 
 # Step 9: Stream-inject spec into template
 # Uses robust POSIX streaming with sed + cat, avoiding memory limits or escape bugs
-log_info "Injecting specification into standalone bundle..."
+if [ "$SPEC_FORMAT" = "none" ]; then
+  log_info "Building standalone viewer with empty embedded specification..."
+else
+  log_info "Injecting specification into standalone bundle..."
+fi
 
 # Part 1: Lines from start of template up to and including the start marker
 sed -e "/\/\/ __EMBEDDED_SPEC_START__/q" "$TEMPLATE_FILE" > "$TEMP_BUILD"
@@ -747,14 +759,20 @@ fi
 mv "$TEMP_BUILD" "$OUTPUT_FILE"
 
 # Step 10: Report build results
-SPEC_SIZE=$(ls -lh "$SPEC_FILE" | awk '{print $5}')
 BUNDLE_SIZE=$(ls -lh "$OUTPUT_FILE" | awk '{print $5}')
 TOTAL_LINES=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
-SPEC_FORMAT_UPPER="$(printf '%s' "$SPEC_FORMAT" | tr '[:lower:]' '[:upper:]')"
+
+if [ -n "$SPEC_FILE" ]; then
+  SPEC_SIZE=$(ls -lh "$SPEC_FILE" | awk '{print $5}')
+  SPEC_FORMAT_UPPER="$(printf '%s' "$SPEC_FORMAT" | tr '[:lower:]' '[:upper:]')"
+  SPEC_SUMMARY="${C_CYAN}$SPEC_FILE${C_RESET} ($SPEC_SIZE, $SPEC_FORMAT_UPPER)"
+else
+  SPEC_SUMMARY="${C_GRAY}None (Generic viewer - runtime upload/URL)${C_RESET}"
+fi
 
 echo ""
 log_success "${C_BOLD}Bundle built successfully!${C_RESET}"
-echo -e "  ${C_GRAY}•${C_RESET} Specification:  ${C_CYAN}$SPEC_FILE${C_RESET} ($SPEC_SIZE, $SPEC_FORMAT_UPPER)"
+echo -e "  ${C_GRAY}•${C_RESET} Specification:  $SPEC_SUMMARY"
 echo -e "  ${C_GRAY}•${C_RESET} Template:       ${C_CYAN}$TEMPLATE_FILE${C_RESET}"
 echo -e "  ${C_GRAY}•${C_RESET} Theme:          ${C_CYAN}$THEME${C_RESET} ($THEME_FILE)"
 echo -e "  ${C_GRAY}•${C_RESET} Server URL:     $([ -n "$SERVER_URL" ] && echo -e "${C_CYAN}$SERVER_URL${C_RESET} (overridden)" || echo -e "${C_GRAY}Default from specification${C_RESET}")"

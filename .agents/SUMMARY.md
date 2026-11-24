@@ -1,9 +1,15 @@
 # Implementation Summary
 
+- **Client-Side YAML Parser in Viewer (`src/index.html`)**:
+  - Added `js-yaml` (`4.1.0`) CDN in [src/index.html](file:///Users/rioastamal/Projects/openapi-swagger-viewer/src/index.html) and updated local upload (`accept=".json,.yaml,.yml"`) and remote URL fetch handlers to use `parseSpecText()`.
+  - Added `normalizeParsedSpec()` (converts YAML `Date` objects to ISO strings and stringifies non-string keys) and hardened `parseOpenApiSpec()` to accept numeric YAML `openapi`/`swagger` versions (e.g. unquoted `swagger: 2.0`).
+  - Rejects empty, multi-document, or non-object YAML inputs with clear error alerts.
+
 - **YAML Specification Support in `build.sh`**:
   - Added `.yaml`/`.yml` (and fallback non-JSON content) detection, validation, and JSON conversion in [build.sh](file:///Users/rioastamal/Projects/openapi-swagger-viewer/build.sh) compatible with macOS Bash 3.2 and Linux.
   - Fallback converter chain: `python3` (`PyYAML`) -> `ruby` (built-in `Psych` + `JSON`) -> `yq` -> `node` (`js-yaml`/`yaml`).
   - Validates YAML syntax, rejects empty/multi-document/non-object roots, resolves anchors/merge keys (`<<: *alias`), normalizes `Date`/`Time` and non-string keys, coerces numeric `openapi`/`swagger` versions to strings, escapes `</script` sequences, and supports `--minify`.
+  - Made `--spec-file` optional for building a standalone generic viewer (`EMBEDDED_OPENAPI_SPEC = null`), rejecting omission only when both `--disable-load-url` and `--disable-upload` are set.
 
 - **Path-level `x-page` Documentation Support**:
   - Revoked the tag description `page:` prefix parsing.
