@@ -1,5 +1,10 @@
 # Implementation Summary
 
+- **OpenAPI `security` Resolution (`src/index.html`)**:
+  - Updated `parseOpenApiSpec()` to parse global `security`, operation-level `op.security` overrides (including `security: []` / `[{}]`), and `components.securitySchemes` / `securityDefinitions`, setting `endpoint.requiresAuth` per endpoint (preserving Bearer fallback only for specs with zero security definitions).
+  - Updated `executeLiveRequest()` and all 4 code generators (`generateFetchCode`, `generateCurlCode`, `generatePhpCode`, `generateGolangCode`) to omit the `Authorization` header when `endpoint.requiresAuth === false`.
+  - Added a `No Auth` indicator badge in `renderDetails()` and the Live Client Variables bar for public (`security: []`) endpoints.
+
 - **Live Response Table View (`src/index.html`)**:
   - Added `JSON | Table` view switcher (`#try-response-view-switcher`) in the Live Response header, persisted via `state.liveResponseView`.
   - Implemented `extractTableDataset()` supporting arrays of objects, wrapped REST responses (auto-detecting `data`/`items`/`results`/etc. with sibling metadata chips), and single objects (2-column `Key | Value`) with dot-notation flattening up to 2 levels.

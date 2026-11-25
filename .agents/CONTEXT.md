@@ -50,7 +50,7 @@ Default layout is a **collapsible 3-column desktop layout** (`lg:` breakpoint) t
 
 3. **Middle Column (API Documentation & Custom Pages)**:
    - **Custom Pages**: Full-width Markdown reader (`renderMarkdown()`) supporting headings, lists, code blocks, blockquotes, and multi-line GFM alerts (`[!NOTE]`, `[!INFO]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`).
-   - **Endpoint Docs**: Method badge, full path, summary, Markdown description, Parameters table, Request Body (`Example` with named `examples` switcher / `Schema`), and Responses (status code tabs with named `examples` switcher and syntax-highlighted JSON).
+   - **Endpoint Docs**: Method badge, full path, `No Auth` badge when endpoint `requiresAuth === false`, summary, Markdown description, Parameters table, Request Body (`Example` with named `examples` switcher / `Schema`), and Responses (status code tabs with named `examples` switcher and syntax-highlighted JSON).
 
 4. **Right Column (Code Examples & Interactive Live Client - collapsible & fullscreen)**:
    - Collapsible on desktop via `#btn-toggle-code-panel` and restorable via docked `#btn-expand-code-panel`.
@@ -58,10 +58,11 @@ Default layout is a **collapsible 3-column desktop layout** (`lg:` breakpoint) t
      - When enabled, automatically hides `#sidebar-container` and `#docs-container` and expands `#code-container` to fill the viewport.
      - In Live Client (`Try It`) fullscreen mode with a visible response, uses a side-by-side split where the **response container is wider than the request form** (`#live-client-request-card` at `lg:w-[36%] xl:w-[34%]`, `#interactive-response-container` taking remaining `lg:flex-1`).
    - **Code Examples Tab (`code`)**:
-     - Multi-language ready-to-run snippets for **cURL**, **JavaScript (Fetch)**, **PHP**, and **Golang**, updated live from server URL, variables, authorization token, and Live Client inputs, with one-click copy.
+     - Multi-language ready-to-run snippets for **cURL**, **JavaScript (Fetch)**, **PHP**, and **Golang**, updated live from server URL, variables, authorization token (only when `endpoint.requiresAuth !== false`), and Live Client inputs, with one-click copy.
    - **Live Client Tab (`try`)**:
-     - Editable **Server URL** override and masked **Authorization Bearer** field with eye toggle.
+     - Editable **Server URL** override and Variables quick bar (showing `No Auth` badge when `endpoint.requiresAuth === false`).
      - Parameter inputs (initialized empty unless `example`, `default`, or `enum` is defined) and JSON Request Body editor with example picker using smart 3-way payload merge (`mergePayloadAttributes()`) plus per-endpoint session draft persistence (`endpointSessionState`).
+     - **Security-Aware Request Execution**: `executeLiveRequest()` only injects `Authorization: Bearer <API_TOKEN>` when `endpoint.requiresAuth !== false` (respecting OpenAPI `security: []` overrides).
      - **Live Response Viewer**:
        - `JSON | Table` view switcher (`#try-response-view-switcher`) for object/array responses.
        - **JSON View**: Syntax-highlighted response body + copy.
@@ -76,6 +77,7 @@ Default layout is a **collapsible 3-column desktop layout** (`lg:` breakpoint) t
 ### 4. Spec Ingestion & Standalone Build (`build.sh`)
 
 - Support both **OpenAPI 3.x** and **Swagger 2.0** specifications in **JSON and YAML** formats, with internal `$ref` resolution (`#/definitions/...`, `#/components/schemas/...`).
+- Resolve endpoint `requiresAuth` from operation `security` (overriding global `security`, e.g., `security: []` disables auth) and `securitySchemes` / `securityDefinitions` (preserving Bearer token fallback only for legacy specs with zero security definitions).
 - `build.sh` treats `--spec-file <path>` as optional (unless both `--disable-upload` and `--disable-load-url` are set):
   - Converts YAML specs (`.yaml`/`.yml` or non-JSON content) using fallback chain `python3` (`PyYAML`) -> `ruby` (`Psych`) -> `yq` -> `node`.
   - Supports `--theme <name>`, `--server-url <url>`, `--minify`, `--disable-upload`, `--disable-load-url`.
